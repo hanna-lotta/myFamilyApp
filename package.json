@@ -1,0 +1,39 @@
+{
+	"name": "my-family-app",
+	"version": "1.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build-frontend": "tsc -b && vite build",
+		"build-server": "tsc -p ./srcServer/tsconfig.json",
+		"start-server": "node --env-file ./.env ./distServer/server.js",
+		"restart-server": "clear && npm run build-server && npm run start-server",
+		"predeploy": "npm run build-frontend && npm run build-server",
+		"lint": "eslint .",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"@aws-sdk/client-dynamodb": "^3.985.0",
+		"@aws-sdk/lib-dynamodb": "^3.985.0",
+		"bcrypt": "^6.0.0",
+		"cors": "^2.8.6",
+		"express": "^5.2.1",
+		"jsonwebtoken": "^9.0.3",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4",
+		"react-router": "^7.13.0",
+		"zod": "^4.3.6",
+		"zustand": "^5.0.11"
+	},
+	"devDependencies": {
+		"@types/bcrypt": "^6.0.0",
+		"@types/cors": "^2.8.19",
+		"@types/express": "^5.0.6",
+		"@types/jsonwebtoken": "^9.0.10",
+		"@types/react": "^19.2.13",
+		"@types/react-dom": "^19.2.3",
+		"@vitejs/plugin-react-swc": "^4.2.3",
+		"typescript": "^5.9.3",
+		"vite": "^7.3.1"
+	}
+}
