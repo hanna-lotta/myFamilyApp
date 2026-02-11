@@ -63,6 +63,26 @@ router.post('/chat', upload.single('image'), async (req, res) => {
       }];
     }
 
+    //hämta alla meddelanden i en specifik session
+    router.get('/chat/messages', async (req, res) => {
+      const { familyId, userId, sessionId } = req.query;
+
+      if (!familyId || !userId || !sessionId) {
+        return res.status(400).json({ error: 'familyId, userId, sessionId krävs' });
+      }
+
+      // Exempel: bygg PK och SK-prefix från dina värden
+      // PK: FAMILY#001
+      // SK börjar med: USER#456#SESSION#sess01#MSG#
+      const pk = `FAMILY#${familyId}`;
+      const sk = `USER#${userId}#SESSION#${sessionId}#MSG#`;
+
+      // Här skulle du göra din DynamoDB query med pk + skPrefix
+      // (ingen kod här eftersom du bara bad om GET‑endpoint)
+
+      res.json({ pk, sk});
+    });
+
     // Använd OpenAI för riktiga svar
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       {
