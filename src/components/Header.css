@@ -1,0 +1,155 @@
+.nav {
+	width: 100%;
+	padding: 0;
+	margin-bottom: 2rem;
+}
+
+.nav-content {
+	width: 100%;
+	margin: 0;
+	padding: 1rem 2rem;
+	
+	
+	/* Glass effect - samma som containers */
+	background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+	border: none;
+	border-bottom: 1px solid var(--stroke);
+	box-shadow: var(--shadow2);
+	backdrop-filter: blur(14px);
+	-webkit-backdrop-filter: blur(14px);
+	
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.links {
+	display: flex;
+	flex-direction: row;
+	gap: 1em;
+	align-items: center;
+}
+
+.links a {
+	text-decoration: none;
+	color: var(--text);
+	padding: 0.75rem 1.5rem;
+	border-radius: 16px;
+	transition: all 0.2s ease;
+	font-size: 0.95rem;
+	font-weight: 500;
+	background: rgba(255,255,255,.05);
+	border: 1px solid var(--stroke2);
+	box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+
+.links a:hover {
+	background: rgba(255,255,255,.12);
+	border-color: rgba(255,255,255,.2);
+	transform: translateY(-1px);
+	box-shadow: 0 6px 16px rgba(0,0,0,.2);
+}
+
+.links a.active {
+	background: linear-gradient(135deg, rgba(124,58,237,.45), rgba(56,189,248,.35));
+	border: 1px solid rgba(255,255,255,.25);
+	box-shadow: 0 8px 20px rgba(124,58,237,.3);
+	color: var(--text);
+}
+
+.username-wrapper {
+	position: relative;
+}
+
+.username {
+	cursor: pointer;
+	text-decoration: none;
+	color: inherit;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	position: relative;
+	padding: 0.5rem 1rem;
+	border-radius: 12px;
+	transition: all 0.2s ease;
+}
+
+.username:hover {
+	background: rgba(255,255,255,.08);
+}
+
+.username h4 {
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 500;
+}
+
+.dropdown-menu {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+	border: 1px solid var(--stroke);
+	border-radius: 16px;
+	box-shadow: var(--shadow2);
+	backdrop-filter: blur(14px);
+	-webkit-backdrop-filter: blur(14px);
+	margin-top: 0.5rem;
+	min-width: 150px;
+	z-index: 1000;
+	overflow: hidden;
+}
+
+.dropdown-menu button {
+	display: block;
+	width: 100%;
+	padding: 0.75rem 1rem;
+	border: none;
+	background: none;
+	text-align: left;
+	cursor: pointer;
+	font-size: 0.95rem;
+	color: var(--text);
+	transition: background 0.2s;
+}
+
+.dropdown-menu button:hover {
+	background: rgba(255,255,255,.10);
+}
+
+.dropdown-menu button.delete-btn {
+	color: var(--danger);
+	border-top: 1px solid var(--stroke2);
+}
+
+.dropdown-menu button.delete-btn:hover {
+	background: rgba(251,113,133,.15);
+}
+
+.color-picker {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 0.5rem;
+	padding: 0.75rem;
+	background: rgba(0,0,0,.15);
+}
+
+.color-option {
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	cursor: pointer;
+	transition: transform 0.2s;
+}
+
+.color-option:hover {
+	transform: scale(1.1);
+}
+
+.appName {
+	font-size: 1.5rem;
+	font-weight: 300;
+	font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+	color: var(--text);
+	letter-spacing: 0.02em;
+}
