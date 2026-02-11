@@ -1,6 +1,8 @@
 import express from 'express';
 import OpenAI from 'openai';
 import multer from 'multer';
+import { QueryCommand, BatchWriteCommand } from "@aws-sdk/lib-dynamodb";
+import { db, tableName } from '../data/dynamoDb.js'
 
 /** Denna fil hanterar chattfunktionaliteten för läxhjälpsassistenten. Den tar emot meddelanden och bilder från frontend, skickar dem till OpenAI API och returnerar AI-genererade svar. Om API-nyckeln saknas eller om det uppstår ett fel, används en mock-funktion för att generera svar baserat på användarens meddelande.	*/
 
@@ -63,25 +65,6 @@ router.post('/chat', upload.single('image'), async (req, res) => {
       }];
     }
 
-    //hämta alla meddelanden i en specifik session
-    router.get('/chat/messages', async (req, res) => {
-      const { familyId, userId, sessionId } = req.query;
-
-      if (!familyId || !userId || !sessionId) {
-        return res.status(400).json({ error: 'familyId, userId, sessionId krävs' });
-      }
-
-      // Exempel: bygg PK och SK-prefix från dina värden
-      // PK: FAMILY#001
-      // SK börjar med: USER#456#SESSION#sess01#MSG#
-      const pk = `FAMILY#${familyId}`;
-      const sk = `USER#${userId}#SESSION#${sessionId}#MSG#`;
-
-      // Här skulle du göra din DynamoDB query med pk + skPrefix
-      // (ingen kod här eftersom du bara bad om GET‑endpoint)
-
-      res.json({ pk, sk});
-    });
 
     // Använd OpenAI för riktiga svar
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -126,6 +109,88 @@ router.post('/chat', upload.single('image'), async (req, res) => {
       timestamp: new Date().toISOString()
     });
   }
+});
+
+// GET hämta alla meddelanden i en specifik session
+router.get('/chat/messages', async (req, res) => {
+  try {
+    const { familyId, userId, sessionId } = req.query;
+
+    if (!familyId || !userId || !sessionId) {
+      return res.status(400).json({ error: 'familyId, userId, sessionId krävs' });
+    }
+
+    // PK: family#001
+    // SK börjar med: user#456#SESSION#sess01#MSG#
+    const pk = `family#${familyId}`;
+    const skPrefix = `user#${userId}#SESSION#${sessionId}#MSG#`;
+
+    const result = await db.send(new QueryCommand({
+      TableName: tableName,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      ExpressionAttributeValues: {
+        ":pk": pk,
+        ":sk": skPrefix
+      }
+    }));
+
+    res.json({ items: result.Items || [] });
+  } catch (error) {
+    console.error('Get messages error:', error);
+    res.status(500).json({ error: 'Kunde inte hämta meddelanden' });
+  }
+});
+
+// Delete alla meddelanden i en session
+router.delete('/chat/session', async (req, res) => {
+  const { familyId, userId, sessionId } = req.query;
+
+  if (!familyId || !userId || !sessionId) {
+    return res.status(400).json({ error: 'familyId, userId, sessionId krävs' });
+  }
+
+  const pk = `family#${familyId}`;
+  const skPrefix = `user#${userId}#SESSION#${sessionId}`;
+
+  // 1) Hämta alla keys för sessionen
+  const keys: { PK: string; SK: string }[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await db.send(new QueryCommand({
+      TableName: tableName,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      ExpressionAttributeValues: {
+        ":pk": pk,
+        ":sk": skPrefix
+      },
+      ProjectionExpression: "PK, SK",
+      ExclusiveStartKey: lastKey
+    }));
+
+    if (result.Items) {
+      keys.push(...(result.Items as { PK: string; SK: string }[]));
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  if (keys.length === 0) {
+    return res.status(404).json({ error: 'Session hittades inte' });
+  }
+
+  // 2) Batch-delete (max 25 per request)
+  for (let i = 0; i < keys.length; i += 25) {
+    const batch = keys.slice(i, i + 25).map(key => ({
+      DeleteRequest: { Key: { PK: key.PK, SK: key.SK } }
+    }));
+
+    await db.send(new BatchWriteCommand({
+      RequestItems: { [tableName]: batch }
+    }));
+  }
+
+  res.json({ deletedCount: keys.length });
 });
 
 // Hjälpfunktion för mock-svar (ta bort när du integrerar riktig AI)
