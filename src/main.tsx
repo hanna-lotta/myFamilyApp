@@ -5,6 +5,7 @@ import App from './App.tsx'
 import Login from './pages/Login.tsx'
 import MyProfile from './pages/MyProfile.tsx'
 import ProtectedRoute from './components/ProtectedRoute.tsx'
+import { Chat } from './pages/chat.tsx'
 
 const router = createHashRouter([
 	{
@@ -18,6 +19,10 @@ const router = createHashRouter([
 			{
 				path: '/my-profile',
 				element: <ProtectedRoute><MyProfile /></ProtectedRoute>
+			},
+			{
+				path: '/chat',
+				element: <ProtectedRoute><Chat /></ProtectedRoute>
 			}
 		]
 	}
