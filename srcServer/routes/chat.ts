@@ -6,6 +6,24 @@ import { db, tableName } from '../data/dynamoDb.js'
 
 /** Denna fil hanterar chattfunktionaliteten för läxhjälpsassistenten. Den tar emot meddelanden och bilder från frontend, skickar dem till OpenAI API och returnerar AI-genererade svar. Om API-nyckeln saknas eller om det uppstår ett fel, används en mock-funktion för att generera svar baserat på användarens meddelande.	*/
 
+/** Rekommenderad struktur:
+ * srcServer/
+  routes/
+    chat.ts          # Bara routing och OpenAI-logik
+  tools/
+    definitions.ts   # Tool-definitions för OpenAI
+    executor.ts      # executeTool-funktionen
+    calculator.ts    # Implementationer av olika tools
+    translator.ts
+    wikipedia.ts
+
+	Eller enklare:
+	srcServer/
+  	 routes/
+      chat.ts
+     tools.ts           # Både definitions och executor
+ */
+
 const router = express.Router();
 
 // Initiera OpenAI
@@ -19,7 +37,7 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 } // Max 5MB
 });
 
-router.post('/chat', upload.single('image'), async (req, res) => {
+router.post('/', upload.single('image'), async (req, res) => {
   try {
     const { message, familyId, userId, sessionId } = req.body;
     const imageFile = req.file;
