@@ -1,7 +1,7 @@
 import express from 'express';
 import OpenAI from 'openai';
 import multer from 'multer';
-import { QueryCommand, BatchWriteCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, BatchWriteCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { db, tableName } from '../data/dynamoDb.js'
 
 /** Denna fil hanterar chattfunktionaliteten för läxhjälpsassistenten. Den tar emot meddelanden och bilder från frontend, skickar dem till OpenAI API och returnerar AI-genererade svar. Om API-nyckeln saknas eller om det uppstår ett fel, används en mock-funktion för att generera svar baserat på användarens meddelande.	*/
@@ -21,20 +21,50 @@ const upload = multer({
 
 router.post('/chat', upload.single('image'), async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, familyId, userId, sessionId } = req.body;
     const imageFile = req.file;
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'Message is required' });
     }
 
+    if (!familyId || !userId || !sessionId) {
+      return res.status(400).json({ error: 'familyId, userId, sessionId krävs' });
+    }
+
+    const timestamp = new Date().toISOString();
+    const pk = `family#${familyId}`;
+
     // Om API-nyckel saknas, använd mock-svar
     if (!process.env.OPENAI_API_KEY) {
       console.warn('OpenAI API key not found, using mock response');
       const mockResponse = generateMockResponse(message);
+      
+      // Spara user message
+      await db.send(new PutCommand({
+        TableName: tableName,
+        Item: {
+          pk: pk,
+          sk: `user#${userId}#SESSION#${sessionId}#MSG#${timestamp}`,
+          role: 'user',
+          text: message
+        }
+      }));
+
+      // Spara assistant response
+      await db.send(new PutCommand({
+        TableName: tableName,
+        Item: {
+          pk: pk,
+          sk: `user#${userId}#SESSION#${sessionId}#MSG#${new Date(new Date(timestamp).getTime() + 1000).toISOString()}`,
+          role: 'assistant',
+          text: mockResponse
+        }
+      }));
+
       return res.json({ 
         response: mockResponse,
-        timestamp: new Date().toISOString()
+        timestamp: timestamp
       });
     }
 
@@ -65,7 +95,6 @@ router.post('/chat', upload.single('image'), async (req, res) => {
       }];
     }
 
-
     // Använd OpenAI för riktiga svar
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       {
@@ -94,9 +123,32 @@ router.post('/chat', upload.single('image'), async (req, res) => {
 
     const aiResponse = responseMessage.content;
 
+    // Spara user message
+    await db.send(new PutCommand({
+      TableName: tableName,
+      Item: {
+        pk: pk,
+        sk: `user#${userId}#SESSION#${sessionId}#MSG#${timestamp}`,
+        role: 'user',
+        text: message
+      }
+    }));
+
+    // Spara assistant response
+    const assistantTimestamp = new Date(new Date(timestamp).getTime() + 1000).toISOString();
+    await db.send(new PutCommand({
+      TableName: tableName,
+      Item: {
+        pk: pk,
+        sk: `user#${userId}#SESSION#${sessionId}#MSG#${assistantTimestamp}`,
+        role: 'assistant',
+        text: aiResponse
+      }
+    }));
+
     res.json({ 
       response: aiResponse || 'Oj, jag kunde inte generera ett svar. Försök igen!',
-      timestamp: new Date().toISOString()
+      timestamp: timestamp
     });
 
   } catch (error) {
@@ -111,7 +163,7 @@ router.post('/chat', upload.single('image'), async (req, res) => {
   }
 });
 
-// GET hämta alla meddelanden i en specifik session
+// GET endpoint, hämta alla meddelanden i en specifik session
 router.get('/chat/messages', async (req, res) => {
   try {
     const { familyId, userId, sessionId } = req.query;
@@ -120,14 +172,20 @@ router.get('/chat/messages', async (req, res) => {
       return res.status(400).json({ error: 'familyId, userId, sessionId krävs' });
     }
 
-    // PK: family#001
-    // SK börjar med: user#456#SESSION#sess01#MSG#
+    // pk: family#001
+    // sk börjar med: user#456#SESSION#sess01#MSG#
     const pk = `family#${familyId}`;
     const skPrefix = `user#${userId}#SESSION#${sessionId}#MSG#`;
 
+    console.log('Query with pk:', pk, 'sk:', skPrefix);
+
     const result = await db.send(new QueryCommand({
       TableName: tableName,
-      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :sk)",
+      ExpressionAttributeNames: {
+        "#pk": "pk",
+        "#sk": "sk"
+      },
       ExpressionAttributeValues: {
         ":pk": pk,
         ":sk": skPrefix
@@ -141,7 +199,7 @@ router.get('/chat/messages', async (req, res) => {
   }
 });
 
-// Delete alla meddelanden i en session
+// Delete endpoint, ta bort alla meddelanden i en session
 router.delete('/chat/session', async (req, res) => {
   const { familyId, userId, sessionId } = req.query;
 
@@ -153,25 +211,30 @@ router.delete('/chat/session', async (req, res) => {
   const skPrefix = `user#${userId}#SESSION#${sessionId}`;
 
   // 1) Hämta alla keys för sessionen
-  const keys: { PK: string; SK: string }[] = [];
+  const keys: { pk: string; sk: string }[] = [];
   let lastKey: Record<string, unknown> | undefined;
 
   do {
     const result = await db.send(new QueryCommand({
       TableName: tableName,
-      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :sk)",
+      ExpressionAttributeNames: {
+        "#pk": "pk",
+        "#sk": "sk"
+      },
       ExpressionAttributeValues: {
         ":pk": pk,
         ":sk": skPrefix
       },
-      ProjectionExpression: "PK, SK",
+      ProjectionExpression: "pk, sk",
       ExclusiveStartKey: lastKey
     }));
 
+    //kontrollera om results.items innehålelr ngt, lägger till items i Keys arrayen, ... packar upp arrayen
     if (result.Items) {
-      keys.push(...(result.Items as { PK: string; SK: string }[]));
+      keys.push(...(result.Items as { pk: string; sk: string }[]));
     }
-
+    //DynamoDB har en gräns på hur många items den kan returnera per query. Om det finns fler items returnerar den LastEvaluatedKey — en markör som säger "nästa query bör börja här".
     lastKey = result.LastEvaluatedKey;
   } while (lastKey);
 
@@ -179,10 +242,10 @@ router.delete('/chat/session', async (req, res) => {
     return res.status(404).json({ error: 'Session hittades inte' });
   }
 
-  // 2) Batch-delete (max 25 per request)
+  // med BatchWritwCommand skriva/radera flera items åt gången istället för en i taget.
   for (let i = 0; i < keys.length; i += 25) {
     const batch = keys.slice(i, i + 25).map(key => ({
-      DeleteRequest: { Key: { PK: key.PK, SK: key.SK } }
+      DeleteRequest: { Key: { pk: key.pk, sk: key.sk } }
     }));
 
     await db.send(new BatchWriteCommand({
@@ -211,5 +274,34 @@ function generateMockResponse(message: string): string {
     return 'Det låter intressant! Kan du berätta lite mer om vad du behöver hjälp med? Ju mer du berättar, desto bättre kan jag hjälpa dig! 💡';
   }
 }
+
+// Delete endpoint, raderar Rendast ett användarmeddelande och AI-svar, 2 items totalt
+router.delete('/chat/message', async (req, res) => {
+  const { familyId, userId, sessionId, timestamp } = req.query;
+
+  if (!familyId || !userId || !sessionId || !timestamp) {
+    return res.status(400).json({ error: 'familyId, userId, sessionId, timestamp krävs' });
+  }
+
+  const pk = `family#${familyId}`;
+  const userSk = `user#${userId}#SESSION#${sessionId}#MSG#${timestamp}`;
+  const assistantSk = `user#${userId}#SESSION#${sessionId}#MSG#${new Date(new Date(timestamp as string).getTime() + 1000).toISOString()}`;
+
+  try {
+    await db.send(new BatchWriteCommand({
+      RequestItems: {
+        [tableName]: [
+          { DeleteRequest: { Key: { pk, sk: userSk } } },
+          { DeleteRequest: { Key: { pk, sk: assistantSk } } }
+        ]
+      }
+    }));
+
+    res.json({ deletedCount: 2 });
+  } catch (error) {
+    console.error('Delete message error:', error);
+    res.status(500).json({ error: 'Kunde inte ta bort meddelandet' });
+  }
+});
 
 export default router;
