@@ -33,20 +33,17 @@ function decodeJwt(token: string): JwtPayload | null {
 }
 
 export const ChatBot: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: 'Hej! Jag är din läxhjälps-assistent. Du kan skriva frågor eller ladda upp ett foto av din läxa! 📚📸',
-      sender: 'ai',
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [lastUploadedImage, setLastUploadedImage] = useState<File | null>(null);
-  const [sessionId] = useState(() => `session_${Date.now()}`);
+  // Använd samma session per dag istället för ny vid varje reload
+  const [sessionId] = useState(() => {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    return `session_${today}`;
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,9 +51,87 @@ export const ChatBot: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Hjälpfunktion för att få userId och familyId från JWT
+  const getAuthParams = (): { userId: string; familyId: string } | null => {
+    const token = localStorage.getItem('jwt');
+    if (!token) return null;
+    
+    const payload = decodeJwt(token);
+    if (!payload) return null;
+    
+    return {
+      userId: payload.userId,
+      familyId: payload.familyId
+    };
+  };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Hämta chatthistorik när komponenten laddas
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      const authParams = getAuthParams();
+      if (!authParams) {
+        // Visa välkomstmeddelande om inte inloggad
+        setMessages([{
+          id: '1',
+          text: 'Hej! Jag är din läxhjälps-assistent. Du kan skriva frågor eller ladda upp ett foto av din läxa! 📚📸',
+          sender: 'ai',
+          timestamp: new Date()
+        }]);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `/api/chat/messages?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${sessionId}`,
+          { credentials: 'include' }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const loadedMessages: Message[] = data.items.map((item: any, index: number) => ({
+            id: `${index}`,
+            text: item.text,
+            sender: item.role === 'user' ? 'user' : 'ai',
+            timestamp: new Date(item.sk.split('#MSG#')[1])
+          }));
+
+          // Lägg alltid till välkomstmeddelandet först
+          const welcomeMessage: Message = {
+            id: 'welcome',
+            text: 'Hej! Jag är din läxhjälps-assistent. Du kan skriva frågor eller ladda upp ett foto av din läxa! 📚📸',
+            sender: 'ai',
+            timestamp: new Date(new Date().setHours(0, 0, 0, 0)) // Början av dagen
+          };
+
+          setMessages([welcomeMessage, ...loadedMessages]);
+        } else {
+          // Om API-anropet misslyckas, visa välkomstmeddelande
+          console.log('Failed to fetch messages, showing welcome message');
+          setMessages([{
+            id: '1',
+            text: 'Hej! Jag är din läxhjälps-assistent. Du kan skriva frågor eller ladda upp ett foto av din läxa! 📚📸',
+            sender: 'ai',
+            timestamp: new Date()
+          }]);
+        }
+      } catch (error) {
+        console.error('Error loading chat history:', error);
+        // Visa välkomstmeddelande vid fel
+        setMessages([{
+          id: '1',
+          text: 'Hej! Jag är din läxhjälps-assistent. Du kan skriva frågor eller ladda upp ett foto av din läxa! 📚📸',
+          sender: 'ai',
+          timestamp: new Date()
+        }]);
+      }
+    };
+
+    loadChatHistory();
+  }, [sessionId]);
 
   // Hantera inklistring av bilder
   useEffect(() => {
@@ -87,20 +162,6 @@ export const ChatBot: React.FC = () => {
       document.removeEventListener('paste', handlePaste);
     };
   }, []);
-
-  // Hjälpfunktion för att få userId och familyId från JWT
-  const getAuthParams = (): { userId: string; familyId: string } | null => {
-    const token = localStorage.getItem('jwt');
-    if (!token) return null;
-    
-    const payload = decodeJwt(token);
-    if (!payload) return null;
-    
-    return {
-      userId: payload.userId,
-      familyId: payload.familyId
-    };
-  };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
