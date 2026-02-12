@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import multer from 'multer';
 import { QueryCommand, BatchWriteCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { db, tableName } from '../../data/dynamoDb.js'
-
+import { tools, executeTool } from './tools.js';
 /** Denna fil hanterar chattfunktionaliteten för läxhjälpsassistenten. Den tar emot meddelanden och bilder från frontend, skickar dem till OpenAI API och returnerar AI-genererade svar. Om API-nyckeln saknas eller om det uppstår ett fel, används en mock-funktion för att generera svar baserat på användarens meddelande.	*/
 
 /** Rekommenderad struktur:
@@ -34,7 +34,14 @@ const openai = new OpenAI({
 // Konfigurera multer för bilduppladdning
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 } // Max 5MB
+  limits: { fileSize: 5 * 1024 * 1024 }, // Max 5MB
+    fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Endast bilder är tillåtna'));
+    }
+  }
 });
 
 router.post('/', upload.single('image'), async (req, res) => {
@@ -113,11 +120,11 @@ router.post('/', upload.single('image'), async (req, res) => {
       }];
     }
 
-    // Använd OpenAI för riktiga svar
+    // Använd OpenAI för riktiga svar med tools
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       {
         role: "system",
-        content: "Du är en vänlig och pedagogisk läxhjälpsassistent för barn. När du får en bild, analysera den noggrant och beskriv vad du ser. Ditt mål är att hjälpa barn förstå och lära sig, inte bara ge dem svaren direkt. Förklara saker på ett enkelt och roligt sätt. Använd emojis ibland för att göra det roligare. Ställ följdfrågor för att hjälpa barnen tänka själva. Uppmuntra dem när de försöker."
+        content: "Du är en vänlig och pedagogisk läxhjälpsassistent för barn. När du får en bild, analysera den noggrant och beskriv vad du ser. Ditt mål är att hjälpa barn förstå och lära sig, inte bara ge dem svaren direkt. Förklara saker på ett enkelt och roligt sätt. Använd emojis ibland för att göra det roligare. Ställ följdfrågor för att hjälpa barnen tänka själva. Uppmuntra dem när de försöker. Du har tillgång till verktyg för beräkningar, översättning, stavningskontroll och informationssökning - använd dem när det passar!"
       },
       {
         role: "user",
@@ -125,18 +132,59 @@ router.post('/', upload.single('image'), async (req, res) => {
       }
     ];
 
-    // API-anrop (använd gpt-4o för bildanalys)
-    const completion = await openai.chat.completions.create({
+    // API-anrop med tools (använd gpt-4o för bildanalys)
+    let completion = await openai.chat.completions.create({
       model: imageFile ? "gpt-4o" : "gpt-4o-mini",
       messages: messages,
+	  tools: tools,
+      tool_choice: "auto",
       max_tokens: 1000,
       temperature: 0.7
     });
 
-    const responseMessage = completion.choices[0]?.message;
+    let responseMessage = completion.choices[0]?.message;
 
     if (!responseMessage) {
       throw new Error('No response from AI');
+    }
+
+	// Hantera tool calls om AI:n vill använda verktyg
+    if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
+      // Lägg till AI:ns svar med tool calls
+      messages.push(responseMessage);
+
+	  // Kör varje tool call
+      for (const toolCall of responseMessage.tool_calls) {
+        if (toolCall.type !== 'function') continue;
+        
+        const functionName = toolCall.function.name;
+        const functionArgs = JSON.parse(toolCall.function.arguments);
+        
+        console.log(`Executing tool: ${functionName} with args:`, functionArgs);
+        
+        const functionResponse = await executeTool(functionName, functionArgs);
+        
+        // Lägg till tool-resultatet
+        messages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: functionResponse
+        });
+      }
+
+	  // Andra API-anropet för att få slutgiltigt svar
+      completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: messages,
+        max_tokens: 500,
+        temperature: 0.7
+      });
+
+      responseMessage = completion.choices[0]?.message;
+      
+      if (!responseMessage) {
+        throw new Error('No response from AI after tool calls');
+      }
     }
 
     const aiResponse = responseMessage.content;
