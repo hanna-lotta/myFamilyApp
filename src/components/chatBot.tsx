@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ChatBot.css';
+import { useQuiz } from '../hooks/useQuiz';
+import { Quiz } from './Quiz';
+
 
 interface Message {
   id: string;
@@ -8,6 +11,7 @@ interface Message {
   timestamp: Date;
   imageUrl?: string;
   showSummaryButton?: boolean;
+  showQuizButton?: boolean;
 }
 
 interface JwtPayload {
@@ -163,6 +167,18 @@ export const ChatBot: React.FC = () => {
     };
   }, []);
 
+  const { isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton } = useQuiz({
+    getAuthParams,
+    lastUploadedImage,
+    sessionId,
+    setIsLoading,
+    isLoading
+  });
+  
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
@@ -225,7 +241,7 @@ export const ChatBot: React.FC = () => {
       const formData = new FormData();
       // Om bara bild utan text, skicka standardmeddelande
       const messageToSend = messageText.trim() || (imageToSend ? 'Vad ser du på denna bild av min läxa?' : '');
-      formData.append('message', messageToSend);
+      formData.append('message', messageToSend || 'Analysera denna bild av min läxa');
       formData.append('familyId', authParams.familyId);
       formData.append('userId', authParams.userId);
       formData.append('sessionId', sessionId);
@@ -251,7 +267,8 @@ export const ChatBot: React.FC = () => {
         text: data.response,
         sender: 'ai',
         timestamp: new Date(),
-        showSummaryButton: !!imageToSend
+        showSummaryButton: !!imageToSend,
+        showQuizButton: !!imageToSend
       };
 
       setMessages(prev => [...prev, aiMessage]);
@@ -343,7 +360,13 @@ export const ChatBot: React.FC = () => {
     }
   };
 
-  return (
+  return isQuizMode ? (
+    <Quiz
+      questions={quizQuestions} // skickar frågorna som hämtats från API
+      onAnswerSubmit={(answer) => console.log('Svar:', answer)}
+      onQuizEnd={() => setIsQuizMode(false)}
+    />
+  ) : (
     <div className="chatbot-container">
       <div className="chat-messages">
         {messages.map((message) => (
@@ -356,7 +379,9 @@ export const ChatBot: React.FC = () => {
                 <img src={message.imageUrl} alt="Uppladdad läxa" className="message-image" />
               )}
               <p>{message.text}</p>
+              <div className="button-container">
               {message.showSummaryButton && (
+                
                 <button 
                   onClick={handleSummaryRequest}
                   className="summary-button"
@@ -365,6 +390,16 @@ export const ChatBot: React.FC = () => {
                   📋 Sammanfatta läxan
                 </button>
               )}
+
+              {message.showQuizButton && (
+                <button
+                  onClick={handleQuizButton}
+                  className="quiz-button"
+                  disabled={isLoading} >
+                    Skapa quiz 
+                  </button>
+              )}
+              </div>
               <span className="message-time">
                 {message.timestamp.toLocaleTimeString('sv-SE', { 
                   hour: '2-digit', 
