@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ChatBot.css';
+import { useQuiz } from '../hooks/useQuiz';
+import { Quiz } from './Quiz';
+
 
 interface Message {
   id: string;
@@ -55,10 +58,6 @@ export const ChatBot: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   // Hjälpfunktion för att få userId och familyId från JWT
   const getAuthParams = (): { userId: string; familyId: string } | null => {
     const token = localStorage.getItem('jwt');
@@ -72,6 +71,18 @@ export const ChatBot: React.FC = () => {
       familyId: payload.familyId
     };
   };
+
+  const { isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton } = useQuiz({
+    getAuthParams,
+    lastUploadedImage,
+    sessionId,
+    setIsLoading,
+    isLoading
+  });
+  
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -252,71 +263,13 @@ export const ChatBot: React.FC = () => {
     }
   };
 
-  //handleQuizButton 
-  const handleQuizButton = async () => {
-    if (!lastUploadedImage || isLoading) return;
-
-      const authParams = getAuthParams();
-  if (!authParams) {
-    console.error('No valid authentication found');
-    return;
-  }
-
-   const userMessage: Message = {
-    id: Date.now().toString(),
-    text: '🎯 Starta ett quiz',
-    sender: 'user',
-    timestamp: new Date()
-  }
-  setMessages(prev => [...prev, userMessage]);
-  setIsLoading(true);
-
-  try {
-    const formData = new FormData();
-    formData.append('message', 'Generera ett utbildningskviz baserat på denna läxa');
-    formData.append('image', lastUploadedImage);
-    formData.append('familyId', authParams.familyId);
-    formData.append('userId', authParams.userId);
-    formData.append('sessionId', sessionId);
-    formData.append('mode', 'quiz');
-
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      body: formData,
-      credentials: 'include'
-    })
-
-    if (!response.ok) {
-      throw new Error('Failed to get response')
-    }
-    const data = await response.json()
-
-    if (data.quiz && Array.isArray(data.quiz)) {
-      const quizMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: 'Här är ditt quiz! Försök att svara på frågorna:',
-        sender: 'ai',
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, quizMessage])
-      }
-
-    } catch (error) {
-    console.error('Kunde inte ladda quiz', error);
-    const errorMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      text: 'Kunde inte skapa quiz. Försök igen!',
-      sender: 'ai',
-      timestamp: new Date()
-    };
-    setMessages(prev => [...prev, errorMessage]);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-
-  return (
+  return isQuizMode ? (
+    <Quiz
+      questions={quizQuestions}
+      onAnswerSubmit={(answer) => console.log('Svar:', answer)}
+      onQuizEnd={() => setIsQuizMode(false)}
+    />
+  ) : (
     <div className="chatbot-container">
       <div className="chat-messages">
         {messages.map((message) => (
@@ -329,7 +282,9 @@ export const ChatBot: React.FC = () => {
                 <img src={message.imageUrl} alt="Uppladdad läxa" className="message-image" />
               )}
               <p>{message.text}</p>
+              <div className="button-container">
               {message.showSummaryButton && (
+                
                 <button 
                   onClick={handleSummaryRequest}
                   className="summary-button"
@@ -347,6 +302,7 @@ export const ChatBot: React.FC = () => {
                     Skapa quiz 
                   </button>
               )}
+              </div>
               <span className="message-time">
                 {message.timestamp.toLocaleTimeString('sv-SE', { 
                   hour: '2-digit', 
