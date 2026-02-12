@@ -199,7 +199,7 @@
   border: 1px solid var(--stroke2);
 }
 
-.summary-button {
+.summary-button, .quiz-button {
   margin-top: 0.75rem;
   padding: 0.625rem 1.25rem;
   background: linear-gradient(135deg, rgba(124,58,237,.85), rgba(56,189,248,.55));

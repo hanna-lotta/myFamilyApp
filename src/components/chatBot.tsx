@@ -252,6 +252,70 @@ export const ChatBot: React.FC = () => {
     }
   };
 
+  //handleQuizButton 
+  const handleQuizButton = async () => {
+    if (!lastUploadedImage || isLoading) return;
+
+      const authParams = getAuthParams();
+  if (!authParams) {
+    console.error('No valid authentication found');
+    return;
+  }
+
+   const userMessage: Message = {
+    id: Date.now().toString(),
+    text: '🎯 Starta ett quiz',
+    sender: 'user',
+    timestamp: new Date()
+  }
+  setMessages(prev => [...prev, userMessage]);
+  setIsLoading(true);
+
+  try {
+    const formData = new FormData();
+    formData.append('message', 'Generera ett utbildningskviz baserat på denna läxa');
+    formData.append('image', lastUploadedImage);
+    formData.append('familyId', authParams.familyId);
+    formData.append('userId', authParams.userId);
+    formData.append('sessionId', sessionId);
+    formData.append('mode', 'quiz');
+
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include'
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to get response')
+    }
+    const data = await response.json()
+
+    if (data.quiz && Array.isArray(data.quiz)) {
+      const quizMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: 'Här är ditt quiz! Försök att svara på frågorna:',
+        sender: 'ai',
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, quizMessage])
+      }
+
+    } catch (error) {
+    console.error('Kunde inte ladda quiz', error);
+    const errorMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      text: 'Kunde inte skapa quiz. Försök igen!',
+      sender: 'ai',
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, errorMessage]);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
   return (
     <div className="chatbot-container">
       <div className="chat-messages">
@@ -273,6 +337,15 @@ export const ChatBot: React.FC = () => {
                 >
                   📋 Sammanfatta läxan
                 </button>
+              )}
+
+              {message.showQuizButton && (
+                <button
+                  onClick={handleQuizButton}
+                  className="quiz-button"
+                  disabled={isLoading} >
+                    Skapa quiz 
+                  </button>
               )}
               <span className="message-time">
                 {message.timestamp.toLocaleTimeString('sv-SE', { 
