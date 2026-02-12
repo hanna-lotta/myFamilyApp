@@ -265,7 +265,7 @@ export const ChatBot: React.FC = () => {
 
   return isQuizMode ? (
     <Quiz
-      questions={quizQuestions}
+      questions={quizQuestions} // skickar frågorna som hämtats från API
       onAnswerSubmit={(answer) => console.log('Svar:', answer)}
       onQuizEnd={() => setIsQuizMode(false)}
     />

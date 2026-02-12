@@ -39,7 +39,7 @@ const upload = multer({
 
 router.post('/', upload.single('image'), async (req, res) => {
   try {
-    const { message, familyId, userId, sessionId } = req.body;
+    const { message, familyId, userId, sessionId, mode } = req.body;
     const imageFile = req.file;
 
     if (!message || typeof message !== 'string') {
@@ -52,6 +52,63 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     const timestamp = new Date().toISOString();
     const pk = `family#${familyId}`;
+
+    //Quiz delen
+
+  if (mode === 'quiz') {
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: 'OPENAI_API_KEY saknas' });
+    }
+
+    try {
+      let quizContent: OpenAI.Chat.Completions.ChatCompletionContentPart[];
+      if (imageFile) {
+        const base64Image = imageFile.buffer.toString('base64');
+        const mimeType = imageFile.mimetype;
+
+        quizContent = [
+          { type: "text", text: "Skapa quiz baserat på läxan i bilden." },
+          { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}` } }
+        ];
+      } else {
+        quizContent = [{ type: "text", text: message }];
+      }
+      //instrukt. till ai
+      const quizSystemPrompt = `Du är en lärare som skapar quiz för barn.
+  Skapa exakt 5 flervalsfrågor baserat på läxan.
+  Returnera ENDAST en JSON-array enligt formatet:
+  [
+    {
+      "question": "Fråga",
+      "options": ["A","B","C","D"],
+      "correctAnswer": "A",
+      "explanation": "Kort förklaring"
+    }
+  ]`;
+
+      const quizMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+        { role: "system", content: quizSystemPrompt },
+        { role: "user", content: quizContent }
+      ];
+        // Skicka quiz‑prompt till OpenAI
+      const quizCompletion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: quizMessages,
+        max_tokens: 2000,
+        temperature: 0.7
+      });
+      // Försök parsa JSON även om modellen råkar lägga till text
+      const quizResponse = quizCompletion.choices[0]?.message?.content || "[]";
+      const jsonMatch = quizResponse.match(/\[[\s\S]*\]/);
+      const quizData = JSON.parse(jsonMatch ? jsonMatch[0] : quizResponse);
+
+      //returnera quiz til lfrontend
+      return res.json({ quiz: quizData, timestamp });
+    } catch (error) {
+      console.error('Quiz error:', error);
+      return res.status(500).json({ error: 'Kunde inte generera quiz' });
+    }
+  }
 
     // Om API-nyckel saknas, använd mock-svar
     if (!process.env.OPENAI_API_KEY) {

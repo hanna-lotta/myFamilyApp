@@ -8,17 +8,17 @@ interface QuizQuestion {
 }
 
 interface QuizProps {
-  questions: QuizQuestion[];
-  onAnswerSubmit: (answer: string) => void;
+  questions: QuizQuestion[]; // quiz‑frågorna från backend
+  onAnswerSubmit: (answer: string) => void; // callback när användaren svarar
   onQuizEnd: () => void;
 }
 
 export const Quiz: React.FC<QuizProps> = ({ questions, onAnswerSubmit, onQuizEnd }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<string[]>([]);
-  const [showResults, setShowResults] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0); //vilken fråga som visas
+  const [answers, setAnswers] = useState<string[]>([]); //anv. svar
+  const [showResults, setShowResults] = useState(false); //visa resultat ist för frågor
 
-  if (!questions || questions.length === 0) {
+  if (!questions || questions.length === 0) { //om inga frågor..
     return (
       <div className="quiz-container">
         <p>Inga quizfrågor tillgängliga.</p>
@@ -27,9 +27,11 @@ export const Quiz: React.FC<QuizProps> = ({ questions, onAnswerSubmit, onQuizEnd
     );
   }
 
-  const currentQuestion = questions[currentIndex];
-  const isLast = currentIndex === questions.length - 1;
+  const currentQuestion = questions[currentIndex]; //fråga som visas nu
+  const isLast = currentIndex === questions.length - 1; //om det är sista frågan
 
+
+  //när användaren klickar ett svar, spara svaret i arrays och gå vidare till nästa fråga eller visa resultat
   const handleAnswer = (answer: string) => {
     const newAnswers = [...answers, answer];
     setAnswers(newAnswers);
@@ -41,11 +43,11 @@ export const Quiz: React.FC<QuizProps> = ({ questions, onAnswerSubmit, onQuizEnd
       setCurrentIndex(currentIndex + 1);
     }
   };
-
+ //räkna rätta svar
   const correctCount = answers.reduce((acc, ans, idx) => {
     return acc + (ans === questions[idx].correctAnswer ? 1 : 0);
   }, 0);
-
+//visa resultat
   if (showResults) {
     const percent = Math.round((correctCount / questions.length) * 100);
 
