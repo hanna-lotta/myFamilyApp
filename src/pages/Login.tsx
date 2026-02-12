@@ -193,7 +193,7 @@ const Login = () => {
 			</div>
 		)}
 		<div className="login">
-		<h2>Logga in</h2>
+		<h2>Logga in / Registrera konto</h2>
 		<form className='form' onSubmit={(e) => { e.preventDefault(); handleSubmitLogin(); }}> 
 		<p className='mustHave'>* obligatoriskt fält</p>
 		<div className="label-container">
