@@ -2,7 +2,7 @@ import express from 'express';
 import OpenAI from 'openai';
 import multer from 'multer';
 import { QueryCommand, BatchWriteCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
-import { db, tableName } from '../data/dynamoDb.js'
+import { db, tableName } from '../../data/dynamoDb.js'
 
 /** Denna fil hanterar chattfunktionaliteten för läxhjälpsassistenten. Den tar emot meddelanden och bilder från frontend, skickar dem till OpenAI API och returnerar AI-genererade svar. Om API-nyckeln saknas eller om det uppstår ett fel, används en mock-funktion för att generera svar baserat på användarens meddelande.	*/
 
@@ -239,7 +239,7 @@ router.post('/', upload.single('image'), async (req, res) => {
 });
 
 // GET endpoint, hämta alla meddelanden i en specifik session
-router.get('/chat/messages', async (req, res) => {
+router.get('/messages', async (req, res) => {
   try {
     const { familyId, userId, sessionId } = req.query;
 
@@ -275,7 +275,7 @@ router.get('/chat/messages', async (req, res) => {
 });
 
 // Delete endpoint, ta bort alla meddelanden i en session
-router.delete('/chat/session', async (req, res) => {
+router.delete('/session', async (req, res) => {
   const { familyId, userId, sessionId } = req.query;
 
   if (!familyId || !userId || !sessionId) {
@@ -351,7 +351,7 @@ function generateMockResponse(message: string): string {
 }
 
 // Delete endpoint, raderar Rendast ett användarmeddelande och AI-svar, 2 items totalt
-router.delete('/chat/message', async (req, res) => {
+router.delete('/message', async (req, res) => {
   const { familyId, userId, sessionId, timestamp } = req.query;
 
   if (!familyId || !userId || !sessionId || !timestamp) {
