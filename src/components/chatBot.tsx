@@ -58,6 +58,36 @@ export const ChatBot: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Hantera inklistring av bilder
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.indexOf('image') !== -1) {
+          const file = item.getAsFile();
+          if (file) {
+            setSelectedImage(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+            e.preventDefault();
+            break;
+          }
+        }
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+    };
+  }, []);
+
   // Hjälpfunktion för att få userId och familyId från JWT
   const getAuthParams = (): { userId: string; familyId: string } | null => {
     const token = localStorage.getItem('jwt');
@@ -132,7 +162,9 @@ export const ChatBot: React.FC = () => {
 
     try {
       const formData = new FormData();
-      formData.append('message', messageText);
+      // Om bara bild utan text, skicka standardmeddelande
+      const messageToSend = messageText.trim() || (imageToSend ? 'Vad ser du på denna bild av min läxa?' : '');
+      formData.append('message', messageToSend);
       formData.append('familyId', authParams.familyId);
       formData.append('userId', authParams.userId);
       formData.append('sessionId', sessionId);
@@ -308,13 +340,14 @@ export const ChatBot: React.FC = () => {
             ref={fileInputRef}
             onChange={handleImageSelect}
             accept="image/*"
+            capture="environment"
             style={{ display: 'none' }}
           />
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isLoading}
             className="attach-button"
-            title="Ladda upp bild av läxa"
+            title="Ta foto, välj från galleri eller klistra in bild"
           >
             📷
           </button>
@@ -322,7 +355,7 @@ export const ChatBot: React.FC = () => {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Skriv din fråga här eller ladda upp en bild..."
+            placeholder="Skriv din fråga här, klistra in en bild, eller ladda upp från kamera/galleri..."
             className="chat-input"
             rows={2}
             disabled={isLoading}
