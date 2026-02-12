@@ -4,7 +4,7 @@ import type { Express, Request, RequestHandler, Response } from 'express';
 import cors from 'cors';
 import loginRouter from './routes/login.js';
 import registerRouter from './routes/register.js';
-import chatRouter from './routes/chat.js';
+import chatRouter from './routes/chatbot/chat.js';
 import familyRouter from './routes/family.js';
 
 const port: number = Number(process.env.PORT) || 1338
