@@ -8,6 +8,7 @@ interface Message {
   timestamp: Date;
   imageUrl?: string;
   showSummaryButton?: boolean;
+  showQuizButton?: boolean;
 }
 
 interface JwtPayload {
@@ -132,7 +133,7 @@ export const ChatBot: React.FC = () => {
 
     try {
       const formData = new FormData();
-      formData.append('message', messageText);
+      formData.append('message', messageText || 'Analysera denna bild av min läxa');
       formData.append('familyId', authParams.familyId);
       formData.append('userId', authParams.userId);
       formData.append('sessionId', sessionId);
@@ -158,7 +159,8 @@ export const ChatBot: React.FC = () => {
         text: data.response,
         sender: 'ai',
         timestamp: new Date(),
-        showSummaryButton: !!imageToSend
+        showSummaryButton: !!imageToSend,
+        showQuizButton: !!imageToSend
       };
 
       setMessages(prev => [...prev, aiMessage]);
