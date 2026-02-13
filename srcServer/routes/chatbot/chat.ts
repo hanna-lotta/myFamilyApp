@@ -117,39 +117,6 @@ router.post('/', upload.single('image'), async (req, res) => {
     }
   }
 
-    // Om API-nyckel saknas, använd mock-svar
-    if (!process.env.OPENAI_API_KEY) {
-      console.warn('OpenAI API key not found, using mock response');
-      const mockResponse = generateMockResponse(message);
-      
-      // Spara user message
-      await db.send(new PutCommand({
-        TableName: tableName,
-        Item: {
-          pk: pk,
-          sk: `user#${userId}#SESSION#${sessionId}#MSG#${timestamp}`,
-          role: 'user',
-          text: message
-        }
-      }));
-
-      // Spara assistant response
-      await db.send(new PutCommand({
-        TableName: tableName,
-        Item: {
-          pk: pk,
-          sk: `user#${userId}#SESSION#${sessionId}#MSG#${new Date(new Date(timestamp).getTime() + 1000).toISOString()}`,
-          role: 'assistant',
-          text: mockResponse
-        }
-      }));
-
-      return res.json({ 
-        response: mockResponse,
-        timestamp: timestamp
-      });
-    }
-
     // Förbered meddelanden - med eller utan bild
     let userContent: OpenAI.Chat.Completions.ChatCompletionContentPart[];
     
@@ -276,13 +243,7 @@ router.post('/', upload.single('image'), async (req, res) => {
 
   } catch (error) {
     console.error('Chat error:', error);
-    
-    // Fallback till mock-svar vid fel
-    const mockResponse = generateMockResponse(req.body.message);
-    res.json({ 
-      response: mockResponse + ' (OBS: AI-tjänsten är inte tillgänglig just nu)',
-      timestamp: new Date().toISOString()
-    });
+    res.status(500).json({ error: 'Kunde inte generera svar från AI-tjänsten' });
   }
 });
 
@@ -378,25 +339,6 @@ router.delete('/session', async (req, res) => {
 
   res.json({ deletedCount: keys.length });
 });
-
-// Hjälpfunktion för mock-svar (ta bort när du integrerar riktig AI)
-function generateMockResponse(message: string): string {
-  const lowerMessage = message.toLowerCase();
-  
-  if (lowerMessage.includes('matte') || lowerMessage.includes('matematik')) {
-    return 'Jag kan hjälpa dig med matte! Vad undrar du över? Addition, subtraktion, multiplikation, division eller något annat? 🔢';
-  } else if (lowerMessage.includes('svenska')) {
-    return 'Svenska är kul! Vill du ha hjälp med grammatik, stavning, läsförståelse eller att skriva berättelser? 📖';
-  } else if (lowerMessage.includes('engelska')) {
-    return 'Great! I can help you with English! What would you like to practice - vocabulary, grammar, or reading? 🌍';
-  } else if (lowerMessage.includes('hej') || lowerMessage.includes('hallå')) {
-    return 'Hej på dig! Vad roligt att du är här. Vilken läxa behöver du hjälp med idag? 😊';
-  } else if (lowerMessage.includes('tack')) {
-    return 'Varsågod! Kom tillbaka när du vill ha mer hjälp. Lycka till med läxorna! 🌟';
-  } else {
-    return 'Det låter intressant! Kan du berätta lite mer om vad du behöver hjälp med? Ju mer du berättar, desto bättre kan jag hjälpa dig! 💡';
-  }
-}
 
 // Delete endpoint, raderar Rendast ett användarmeddelande och AI-svar, 2 items totalt
 router.delete('/message', async (req, res) => {
