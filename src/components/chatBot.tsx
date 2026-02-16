@@ -3,7 +3,7 @@ import './ChatBot.css';
 import { useQuiz } from '../hooks/useQuiz';
 import { Quiz } from './Quiz';
 import { SpeakButton } from './SpeakButton';
-
+import { SpeechToTextButton } from './SpeechToTextButton';
 
 interface Message {
   id: string;
@@ -479,7 +479,7 @@ export const ChatBot: React.FC = () => {
               </span>
 
                  <SpeakButton text={message.text} />
-                 
+
               {/* Ta bort enskilt meddelande */}
               {message.id !== 'welcome' && (
               <button
@@ -536,6 +536,8 @@ export const ChatBot: React.FC = () => {
             📷
           </button>
 
+          <SpeechToTextButton onResult={(text) => setInputText(text)} />
+
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
@@ -544,6 +546,7 @@ export const ChatBot: React.FC = () => {
             className="chat-input"
             rows={2}
             disabled={isLoading}
+            
           />
           <button
             onClick={handleSendMessage}
