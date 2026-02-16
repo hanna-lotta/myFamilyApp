@@ -58,7 +58,12 @@
     border: none;
     color: var(--muted);
  }
-
+#speak-button {
+    background: none;
+    padding:0;
+    border: none;
+    font-size: 16px;
+}
 
 .user-message .message-content {
   background: linear-gradient(135deg, rgba(124,58,237,.35), rgba(56,189,248,.25));

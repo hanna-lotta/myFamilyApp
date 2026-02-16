@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import './ChatBot.css';
 import { useQuiz } from '../hooks/useQuiz';
 import { Quiz } from './Quiz';
+import { SpeakButton } from './SpeakButton';
 
 
 interface Message {
@@ -420,6 +421,7 @@ export const ChatBot: React.FC = () => {
     }
   };
 
+
   return isQuizMode ? (
     <Quiz
       questions={quizQuestions} // skickar frågorna som hämtats från API
@@ -476,6 +478,8 @@ export const ChatBot: React.FC = () => {
                 })}
               </span>
 
+                 <SpeakButton text={message.text} />
+                 
               {/* Ta bort enskilt meddelande */}
               {message.id !== 'welcome' && (
               <button
@@ -486,7 +490,7 @@ export const ChatBot: React.FC = () => {
                 🗑️
               </button>
             )}
-          
+             
 
               </div>
              
@@ -531,6 +535,7 @@ export const ChatBot: React.FC = () => {
           >
             📷
           </button>
+
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
