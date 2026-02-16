@@ -1,7 +1,7 @@
 import express from 'express';
 import OpenAI from 'openai';
 import multer from 'multer';
-import { QueryCommand, BatchWriteCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, BatchWriteCommand, PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { db, tableName } from '../../data/dynamoDb.js'
 import { tools, executeTool } from './tools.js';
 /** Denna fil hanterar chattfunktionaliteten för läxhjälpsassistenten. Den tar emot meddelanden och bilder från frontend, skickar dem till OpenAI API och returnerar AI-genererade svar. Om API-nyckeln saknas eller om det uppstår ett fel, används en mock-funktion för att generera svar baserat på användarens meddelande.	*/
@@ -340,7 +340,7 @@ router.delete('/session', async (req, res) => {
   res.json({ deletedCount: keys.length });
 });
 
-// Delete endpoint, raderar Rendast ett användarmeddelande och AI-svar, 2 items totalt
+// Delete endpoint, raderar Rendast ett användarmeddelande 
 router.delete('/message', async (req, res) => {
   const { familyId, userId, sessionId, timestamp } = req.query;
 
@@ -350,19 +350,13 @@ router.delete('/message', async (req, res) => {
 
   const pk = `family#${familyId}`;
   const userSk = `user#${userId}#SESSION#${sessionId}#MSG#${timestamp}`;
-  const assistantSk = `user#${userId}#SESSION#${sessionId}#MSG#${new Date(new Date(timestamp as string).getTime() + 1000).toISOString()}`;
-
-  try {
-    await db.send(new BatchWriteCommand({
-      RequestItems: {
-        [tableName]: [
-          { DeleteRequest: { Key: { pk, sk: userSk } } },
-          { DeleteRequest: { Key: { pk, sk: assistantSk } } }
-        ]
-      }
+try {
+    await db.send(new DeleteCommand({
+      TableName: tableName,
+      Key: { pk, sk: userSk }
     }));
 
-    res.json({ deletedCount: 2 });
+    res.json({ deletedCount: 1 });
   } catch (error) {
     console.error('Delete message error:', error);
     res.status(500).json({ error: 'Kunde inte ta bort meddelandet' });

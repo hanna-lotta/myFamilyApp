@@ -137,6 +137,66 @@ export const ChatBot: React.FC = () => {
     loadChatHistory();
   }, [sessionId]);
 
+   // Radera ett enskild meddelande
+  const handleDeleteMessage = async (messageId: string, timestamp: Date) => {
+    // Visa bekräftelseruta innan radering
+    if (!window.confirm('Är du säker att du vill ta bort detta meddelande?')) {
+      return;
+    }
+
+    const authParams = getAuthParams();
+    if (!authParams) return;
+
+    try {
+      const response = await fetch(
+        `/api/chat/message?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${sessionId}&timestamp=${timestamp.toISOString()}`,
+        {
+          method: 'DELETE',
+          credentials: 'include'
+        }
+      );
+
+      if (response.ok) {
+        setMessages(prev => prev.filter(msg => msg.id !== messageId));
+      } else {
+        alert('Kunde inte ta bort meddelandet');
+      }
+    } catch (error) {
+      console.error('Fel när meddelandet skulle raderas:', error);
+     
+    }
+  };
+
+//radera hel chat session
+
+//visar bekräftelseruta, klickarman på avbryt så avslutas funkt.
+  const handleDeleteSession = async () => {
+    if (!window.confirm('Är du säker? Det går inte att ångra. Alla meddelanden i denna session kommer att raderas.')) {
+      return;
+    }
+
+    const authParams = getAuthParams();
+    if (!authParams) return;
+
+    try {
+      const response = await fetch(
+        `/api/chat/session?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${sessionId}`,
+        {
+          method: 'DELETE',
+          credentials: 'include'
+        }
+      );
+
+      if (response.ok) {
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Kunde inte ta bort session:', error);
+     
+    }
+  };
+
+
   // Hantera inklistring av bilder
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
@@ -368,6 +428,16 @@ export const ChatBot: React.FC = () => {
     />
   ) : (
     <div className="chatbot-container">
+      {/*  datum och radera session i headern */}
+      <div className="chat-header">
+        <h2>Chat - {new Date().toLocaleDateString('sv-SE')}</h2>
+        <button 
+          onClick={handleDeleteSession}
+          id="delete-session-btn"
+        >
+          Radera session 🗑️
+        </button>
+      </div>
       <div className="chat-messages">
         {messages.map((message) => (
           <div
@@ -399,13 +469,27 @@ export const ChatBot: React.FC = () => {
                     Skapa quiz 
                   </button>
               )}
-              </div>
               <span className="message-time">
                 {message.timestamp.toLocaleTimeString('sv-SE', { 
                   hour: '2-digit', 
                   minute: '2-digit' 
                 })}
               </span>
+
+              {/* Ta bort enskilt meddelande */}
+              {message.id !== 'welcome' && (
+              <button
+                onClick={() => handleDeleteMessage(message.id, message.timestamp)}
+                id="delete-message-btn"
+                title="Ta bort detta meddelande"
+              >
+                🗑️
+              </button>
+            )}
+          
+
+              </div>
+             
             </div>
           </div>
         ))}
