@@ -4,6 +4,7 @@ import { useQuiz } from '../hooks/useQuiz';
 import { Quiz } from './Quiz';
 import { SpeakButton } from './SpeakButton';
 import { SpeechToTextButton } from './SpeechToTextButton';
+import { QuizControl } from './QuizControl';
 
 interface Message {
   id: string;
@@ -233,7 +234,9 @@ export const ChatBot: React.FC = () => {
     lastUploadedImage,
     sessionId,
     setIsLoading,
-    isLoading
+    isLoading,
+    difficulty: 'medium' // Standard svårighetsgrad
+
   });
   
   useEffect(() => {
@@ -422,141 +425,160 @@ export const ChatBot: React.FC = () => {
   };
 
 
-  return isQuizMode ? (
-    <Quiz
-      questions={quizQuestions} // skickar frågorna som hämtats från API
-      onAnswerSubmit={(answer) => console.log('Svar:', answer)}
-      onQuizEnd={() => setIsQuizMode(false)}
-    />
-  ) : (
-    <div className="chatbot-container">
-      {/*  datum och radera session i headern */}
-      <div className="chat-header">
-        <h2>Chat - {new Date().toLocaleDateString('sv-SE')}</h2>
-        <button 
-          onClick={handleDeleteSession}
-          id="delete-session-btn"
-        >
-          Radera session 🗑️
-        </button>
-      </div>
-      <div className="chat-messages">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`message ${message.sender === 'user' ? 'user-message' : 'ai-message'}`}
-          >
-            <div className="message-content">
-              {message.imageUrl && (
-                <img src={message.imageUrl} alt="Uppladdad läxa" className="message-image" />
-              )}
-              <p>{message.text}</p>
-              <div className="button-container">
-              {message.showSummaryButton && (
-                
-                <button 
-                  onClick={handleSummaryRequest}
-                  className="summary-button"
-                  disabled={isLoading}
+  return (
+    <QuizControl
+      getAuthParams={getAuthParams}
+      lastUploadedImage={lastUploadedImage}
+      sessionId={sessionId}
+      setIsLoading={setIsLoading}
+      isLoading={isLoading}
+    >
+      {({ isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton, difficulty, setDifficulty }) => (
+        <div className="chatbot-container">
+          <div className="chat-header">
+            <h2>Chat - {new Date().toLocaleDateString('sv-SE')}</h2>
+            {isQuizMode && (
+              <label className="quiz-difficulty">
+                Quiz-nivå
+                <select
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(e.target.value as 'easy' | 'medium' | 'hard')}
                 >
-                  📋 Sammanfatta läxan
-                </button>
-              )}
-
-              {message.showQuizButton && (
-                <button
-                  onClick={handleQuizButton}
-                  className="quiz-button"
-                  disabled={isLoading} >
-                    Skapa quiz 
-                  </button>
-              )}
-              <span className="message-time">
-                {message.timestamp.toLocaleTimeString('sv-SE', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </span>
-
-                 <SpeakButton text={message.text} />
-
-              {/* Ta bort enskilt meddelande */}
-              {message.id !== 'welcome' && (
-              <button
-                onClick={() => handleDeleteMessage(message.id, message.timestamp)}
-                id="delete-message-btn"
-                title="Ta bort detta meddelande"
-              >
-                🗑️
-              </button>
+                  <option value="easy">Lätt</option>
+                  <option value="medium">Mellan</option>
+                  <option value="hard">Svår</option>
+                </select>
+              </label>
             )}
-             
+            <button onClick={handleDeleteSession} id="delete-session-btn">
+              Radera session 🗑️
+            </button>
+          </div>
 
-              </div>
-             
+          {isQuizMode ? (
+            <Quiz
+              questions={quizQuestions}
+              onAnswerSubmit={(answer) => console.log('Svar:', answer)}
+              onQuizEnd={() => setIsQuizMode(false)}
+            />
+          ) : (
+            <div className="chat-messages">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`message ${message.sender === 'user' ? 'user-message' : 'ai-message'}`}
+                >
+                  <div className="message-content">
+                    {message.imageUrl && (
+                      <img src={message.imageUrl} alt="Uppladdad läxa" className="message-image" />
+                    )}
+                    <p>{message.text}</p>
+                    <div className="button-container">
+                      {message.showSummaryButton && (
+                        <button 
+                          onClick={handleSummaryRequest}
+                          className="summary-button"
+                          disabled={isLoading}
+                        >
+                          📋 Sammanfatta läxan
+                        </button>
+                      )}
+
+                      {message.showQuizButton && (
+                        <button
+                          onClick={handleQuizButton}
+                          className="quiz-button"
+                          disabled={isLoading} >
+                          Skapa quiz 
+                        </button>
+                      )}
+                      <span className="message-time">
+                        {message.timestamp.toLocaleTimeString('sv-SE', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </span>
+
+                      <SpeakButton text={message.text} />
+
+                      {/* Ta bort enskilt meddelande */}
+                      {message.id !== 'welcome' && (
+                        <button
+                          onClick={() => handleDeleteMessage(message.id, message.timestamp)}
+                          id="delete-message-btn"
+                          title="Ta bort detta meddelande"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {isLoading && (
+                <div className="message ai-message">
+                  <div className="message-content">
+                    <div className="typing-indicator">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
             </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="message ai-message">
-            <div className="message-content">
-              <div className="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
+          )}
+
+          {!isQuizMode && (
+            <div className="chat-input-container">
+              {imagePreview && (
+                <div className="image-preview">
+                  <img src={imagePreview} alt="Preview" />
+                  <button onClick={handleRemoveImage} className="remove-image-btn">×</button>
+                </div>
+              )}
+              <div className="input-row">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageSelect}
+                  accept="image/*"
+                  capture="environment"
+                  style={{ display: 'none' }}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading}
+                  className="attach-button"
+                  title="Ta foto, välj från galleri eller klistra in bild"
+                >
+                  📷
+                </button>
+
+                <SpeechToTextButton onResult={(text) => setInputText(text)} />
+
+                <textarea
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Skriv din fråga här, klistra in en bild, eller ladda upp från kamera/galleri..."
+                  className="chat-input"
+                  rows={2}
+                  disabled={isLoading}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={(!inputText.trim() && !selectedImage) || isLoading}
+                  className="send-button"
+                >
+                  Skicka
+                </button>
               </div>
             </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      <div className="chat-input-container">
-        {imagePreview && (
-          <div className="image-preview">
-            <img src={imagePreview} alt="Preview" />
-            <button onClick={handleRemoveImage} className="remove-image-btn">×</button>
-          </div>
-        )}
-        <div className="input-row">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageSelect}
-            accept="image/*"
-            capture="environment"
-            style={{ display: 'none' }}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-            className="attach-button"
-            title="Ta foto, välj från galleri eller klistra in bild"
-          >
-            📷
-          </button>
-
-          <SpeechToTextButton onResult={(text) => setInputText(text)} />
-
-          <textarea
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Skriv din fråga här, klistra in en bild, eller ladda upp från kamera/galleri..."
-            className="chat-input"
-            rows={2}
-            disabled={isLoading}
-            
-          />
-          <button
-            onClick={handleSendMessage}
-            disabled={(!inputText.trim() && !selectedImage) || isLoading}
-            className="send-button"
-          >
-            Skicka
-          </button>
+          )}
         </div>
-      </div>
-    </div>
+      )}
+    </QuizControl>
   );
 };

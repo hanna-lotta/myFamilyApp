@@ -5,6 +5,7 @@ export interface QuizQuestion {
   options: string[];
   correctAnswer: string;
   explanation: string;
+  
 }
 
 interface UseQuizParams {
@@ -13,14 +14,18 @@ interface UseQuizParams {
   sessionId: string;
   setIsLoading: (v: boolean) => void;
   isLoading: boolean;
+  difficulty: 'easy' | 'medium' | 'hard'; 
+  
 }
 
 export const useQuiz = ({
   getAuthParams,
   lastUploadedImage,
   sessionId,
+  difficulty,
   setIsLoading,
-  isLoading
+  isLoading, 
+  
 }: UseQuizParams) => {
   const [isQuizMode, setIsQuizMode] = useState(false);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
@@ -48,6 +53,7 @@ export const useQuiz = ({
       formData.append('userId', authParams.userId);
       formData.append('sessionId', sessionId);
       formData.append('mode', 'quiz');
+      formData.append('difficulty', difficulty);
 
       //skicka till backend
       const response = await fetch('/api/chat', {

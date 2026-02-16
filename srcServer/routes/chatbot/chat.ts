@@ -46,7 +46,7 @@ const upload = multer({
 
 router.post('/', upload.single('image'), async (req, res) => {
   try {
-    const { message, familyId, userId, sessionId, mode } = req.body;
+    const { message, familyId, userId, sessionId, mode, difficulty } = req.body;
     const imageFile = req.file;
 
     if (!message || typeof message !== 'string') {
@@ -67,6 +67,16 @@ router.post('/', upload.single('image'), async (req, res) => {
       return res.status(500).json({ error: 'OPENAI_API_KEY saknas' });
     }
 
+    //svårighetsgrad
+    const difficultyLevel = typeof difficulty === 'string' ? difficulty : 'medium';
+const difficultyInstruction =
+  difficultyLevel === 'easy'
+    ? 'Anpassa for nyborjare. Anvand enkla ord, korta meningar och undvik trickfragor.'
+    : difficultyLevel === 'hard'
+      ? 'Gor mer avancerade fragor som kravs resonemang. Anvand mer precisa begrepp.'
+      : 'Normal svarighetsgrad. Balans mellan enkelhet och utmaning.';
+
+
     try {
       let quizContent: OpenAI.Chat.Completions.ChatCompletionContentPart[];
       if (imageFile) {
@@ -83,6 +93,7 @@ router.post('/', upload.single('image'), async (req, res) => {
       //instrukt. till ai
       const quizSystemPrompt = `Du är en lärare som skapar quiz för barn.
   Skapa exakt 5 flervalsfrågor baserat på läxan.
+  Svårighetsgrad: ${difficultyInstruction}
   Returnera ENDAST en JSON-array enligt formatet:
   [
     {
