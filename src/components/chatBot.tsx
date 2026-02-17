@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ChatBot.css';
-import { useQuiz } from '../hooks/useQuiz';
 import { Quiz } from './Quiz';
 import { SpeakButton } from './SpeakButton';
 import { SpeechToTextButton } from './SpeechToTextButton';
@@ -229,15 +228,6 @@ export const ChatBot: React.FC = () => {
     };
   }, []);
 
-  const { isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton } = useQuiz({
-    getAuthParams,
-    lastUploadedImage,
-    sessionId,
-    setIsLoading,
-    isLoading,
-    difficulty: 'medium' // Standard svårighetsgrad
-
-  });
   
   useEffect(() => {
     scrollToBottom();
@@ -433,7 +423,7 @@ export const ChatBot: React.FC = () => {
       setIsLoading={setIsLoading}
       isLoading={isLoading}
     >
-      {({ isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton, difficulty, setDifficulty }) => (
+      {({ isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton, difficulty, setDifficulty, generateQuiz }) => (
         <div className="chatbot-container">
           <div className="chat-header">
             <h2>Chat - {new Date().toLocaleDateString('sv-SE')}</h2>
@@ -442,7 +432,11 @@ export const ChatBot: React.FC = () => {
                 Quiz-nivå
                 <select
                   value={difficulty}
-                  onChange={(e) => setDifficulty(e.target.value as 'easy' | 'medium' | 'hard')}
+                  onChange={(e) => {
+                    const newDifficulty = e.target.value as 'easy' | 'medium' | 'hard';
+                    setDifficulty(newDifficulty);
+                    generateQuiz(newDifficulty);
+                  }}
                 >
                   <option value="easy">Lätt</option>
                   <option value="medium">Mellan</option>
@@ -457,6 +451,8 @@ export const ChatBot: React.FC = () => {
 
           {isQuizMode ? (
             <Quiz
+            // key används för att tvinga omrendering av Quiz-komponenten när svårighetsgraden ändras eller nya frågor genereras
+              key={`${difficulty}-${quizQuestions.length}`}
               questions={quizQuestions}
               onAnswerSubmit={(answer) => console.log('Svar:', answer)}
               onQuizEnd={() => setIsQuizMode(false)}

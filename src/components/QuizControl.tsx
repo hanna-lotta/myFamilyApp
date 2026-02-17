@@ -9,6 +9,7 @@ type QuizControlRenderProps = {
   handleQuizButton: () => void;
   difficulty: 'easy' | 'medium' | 'hard';
   setDifficulty: (v: 'easy' | 'medium' | 'hard') => void;
+  generateQuiz: (difficulty: 'easy' | 'medium' | 'hard') => Promise<void>;
 };
 
 type QuizControlProps = {
@@ -30,7 +31,7 @@ export const QuizControl: React.FC<QuizControlProps> = ({
 }) => {
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
 
-  const { isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton } = useQuiz({
+  const { isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton, generateQuiz } = useQuiz({
     getAuthParams,
     lastUploadedImage,
     sessionId,
@@ -47,7 +48,8 @@ export const QuizControl: React.FC<QuizControlProps> = ({
         quizQuestions,
         handleQuizButton,
         difficulty,
-        setDifficulty
+        setDifficulty,
+        generateQuiz
       })}
     </>
   );
