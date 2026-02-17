@@ -437,18 +437,24 @@ export const ChatBot: React.FC = () => {
                     setDifficulty(newDifficulty);
                     generateQuiz(newDifficulty);
                   }}
+                  disabled={isLoading}
                 >
                   <option value="easy">Lätt</option>
                   <option value="medium">Mellan</option>
                   <option value="hard">Svår</option>
                 </select>
+                {/* Visa användare att quiz laddas*/}
+                 {isLoading && <span className="loading-spinner">⟳</span>}
               </label>
             )}
+            {!isQuizMode && (
             <button onClick={handleDeleteSession} id="delete-session-btn">
               Radera session 🗑️
             </button>
-          </div>
+            )}
 
+          </div>
+              
           {isQuizMode ? (
             <Quiz
             // key används för att tvinga omrendering av Quiz-komponenten när svårighetsgraden ändras eller nya frågor genereras

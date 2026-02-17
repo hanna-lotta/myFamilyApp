@@ -338,8 +338,76 @@
 .quiz-difficulty {
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+  font-size: 18px;
+
+    select {
+      padding: 0.3rem;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    
+    }
+}
+.loading-spinner {
+  display: inline-block;
+  font-size: 1.2rem;
+  animation: spin 1s linear infinite;
+}
+.quiz-header {
+  margin: 0.1rem;
+
+    h2 {
+      font-size: 1.5rem;
+      color: var(--text);
+      padding: 0.1rem 0 0.1rem 0;
+    }
+    span {
+      font-size: 1.2rem;
+      color: var(--text);
+      padding: 0.1rem 0 0.1rem 0;
+    }
+}
+.quiz-question {
+    h3 {
+      font-size: 1.3rem;
+      color: var(--text);
+      padding: 1.1rem 0.1rem 1.1rem 0.1rem;
+    }
+}
+.quiz-options {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1.2rem 0 1.2rem 0;
+}
+.quiz-option-btn {
+  flex: 1;
+ 
+}
+.quiz-exit-btn {
+  margin-top: 0.75rem;
+} 
+.quiz-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.quiz-result {
+  font-size: 1.2rem;
+  font-style: italic;
+  padding:  1.2rem 0 1.2rem 0;
 }
 
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* Responsive design */
 @media (max-width: 768px) {
