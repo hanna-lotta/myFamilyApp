@@ -3,7 +3,7 @@ import * as z from 'zod'
 export const PayloadSchema = z.object({
   userId: z.string(),
   username: z.string(),
-  role: z.enum(['parent', 'child', 'member']),
+  role: z.enum(['parent', 'child']),
   familyId: z.string()
 });
 export type Payload = z.infer<typeof PayloadSchema>; // extrahera datatyp (type signature)
@@ -12,7 +12,8 @@ export const registerSchema = z.object({
   username: z.string().min(3),
   password: z.string().min(6),
   inviteCode: z.string().optional(), // Optional invite-kod
-  role: z.enum(['parent', 'child']).optional() // Optional roll-val
+  role: z.enum(['parent', 'child']).optional(), // Optional roll-val
+  childBirthdate: z.string().optional() // Barnets födelsedatum (YYYY-MM-DD) när man registrerar sig med child_invite
 })
 
 export type RegisterSchema = z.infer<typeof registerSchema>
