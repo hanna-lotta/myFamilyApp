@@ -13,36 +13,36 @@ interface UseQuizParams {
   sessionId: string;
   setIsLoading: (v: boolean) => void;
   isLoading: boolean;
+  difficulty: 'easy' | 'medium' | 'hard'; 
+  
 }
 
 export const useQuiz = ({
   getAuthParams,
   lastUploadedImage,
   sessionId,
+  difficulty,
   setIsLoading,
-  isLoading
+  isLoading, 
+  
 }: UseQuizParams) => {
   const [isQuizMode, setIsQuizMode] = useState(false);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
 
-  //avbryt om du saknar bild eller redan laddar
   const handleQuizButton = async () => {
     if (!lastUploadedImage || isLoading) return;
 
-//hämta inloggningsdata
     const authParams = getAuthParams();
     if (!authParams) {
       console.error('No valid authentication found');
       return;
     }
-//loading blir true
+
     setIsLoading(true);
 
 	// Authorization‑header (Bearer: token) skickas nu i chat‑fetchar
     const token = localStorage.getItem('jwt');
     const authHeader = token ? `Bearer: ${token}` : null;
-
-    //bygger FormData
     try {
       const formData = new FormData();
       formData.append('message', 'Generera ett utbildningskviz baserat på denna läxa');
@@ -51,8 +51,54 @@ export const useQuiz = ({
       formData.append('userId', authParams.userId);
       formData.append('sessionId', sessionId);
       formData.append('mode', 'quiz');
+      formData.append('difficulty', difficulty);
 
-      //skicka till backend
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
+
+      const data = await response.json();
+
+      if (data.quiz && Array.isArray(data.quiz)) {
+        setQuizQuestions(data.quiz);
+        setIsQuizMode(true);
+      }
+    } catch (error) {
+      console.error('Kunde inte ladda quiz', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const generateQuiz = async (difficultyLevel: 'easy' | 'medium' | 'hard' = difficulty) => {
+    if (!lastUploadedImage) {
+      return;
+    }
+
+    const authParams = getAuthParams();
+    if (!authParams) {
+      console.error('No valid authentication found');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('message', 'Generera ett utbildningskviz baserat på denna läxa');
+      formData.append('image', lastUploadedImage);
+      formData.append('familyId', authParams.familyId);
+      formData.append('userId', authParams.userId);
+      formData.append('sessionId', sessionId);
+      formData.append('mode', 'quiz');
+      formData.append('difficulty', difficultyLevel);
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         body: formData,
@@ -66,14 +112,12 @@ export const useQuiz = ({
 
       const data = await response.json();
 
-      //sparar frågor och aktiverar quiz läge , det gör att isQuizMode blir true och ChatBot.tsx byter ui
       if (data.quiz && Array.isArray(data.quiz)) {
         setQuizQuestions(data.quiz);
         setIsQuizMode(true);
       }
     } catch (error) {
       console.error('Kunde inte ladda quiz', error);
-      //stäng 'loading'
     } finally {
       setIsLoading(false);
     }
@@ -83,6 +127,7 @@ export const useQuiz = ({
     isQuizMode,
     setIsQuizMode,
     quizQuestions,
-    handleQuizButton
+    handleQuizButton,
+    generateQuiz
   };
 };

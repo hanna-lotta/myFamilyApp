@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ChatBot.css';
-import { useQuiz } from '../hooks/useQuiz';
 import { Quiz } from './Quiz';
-
+import { SpeakButton } from './SpeakButton';
+import { SpeechToTextButton } from './SpeechToTextButton';
+import { QuizControl } from './QuizControl';
 
 interface Message {
   id: string;
@@ -138,6 +139,66 @@ export const ChatBot: React.FC = () => {
 
     loadChatHistory();
   }, [sessionId]);
+
+   // Radera ett enskild meddelande
+  const handleDeleteMessage = async (messageId: string, timestamp: Date) => {
+    // Visa bekräftelseruta innan radering
+    if (!window.confirm('Är du säker att du vill ta bort detta meddelande?')) {
+      return;
+    }
+
+    const authParams = getAuthParams();
+    if (!authParams) return;
+
+    try {
+      const response = await fetch(
+        `/api/chat/message?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${sessionId}&timestamp=${timestamp.toISOString()}`,
+        {
+          method: 'DELETE',
+          credentials: 'include'
+        }
+      );
+
+      if (response.ok) {
+        setMessages(prev => prev.filter(msg => msg.id !== messageId));
+      } else {
+        alert('Kunde inte ta bort meddelandet');
+      }
+    } catch (error) {
+      console.error('Fel när meddelandet skulle raderas:', error);
+     
+    }
+  };
+
+//radera hel chat session
+
+//visar bekräftelseruta, klickarman på avbryt så avslutas funkt.
+  const handleDeleteSession = async () => {
+    if (!window.confirm('Är du säker? Det går inte att ångra. Alla meddelanden i denna session kommer att raderas.')) {
+      return;
+    }
+
+    const authParams = getAuthParams();
+    if (!authParams) return;
+
+    try {
+      const response = await fetch(
+        `/api/chat/session?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${sessionId}`,
+        {
+          method: 'DELETE',
+          credentials: 'include'
+        }
+      );
+
+      if (response.ok) {
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Kunde inte ta bort session:', error);
+     
+    }
+  };
+
 
   // Hantera inklistring av bilder
   useEffect(() => {
@@ -370,111 +431,173 @@ export const ChatBot: React.FC = () => {
     }
   };
 
-  return isQuizMode ? (
-    <Quiz
-      questions={quizQuestions} // skickar frågorna som hämtats från API
-      onAnswerSubmit={(answer) => console.log('Svar:', answer)}
-      onQuizEnd={() => setIsQuizMode(false)}
-    />
-  ) : (
-    <div className="chatbot-container">
-      <div className="chat-messages">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`message ${message.sender === 'user' ? 'user-message' : 'ai-message'}`}
-          >
-            <div className="message-content">
-              {message.imageUrl && (
-                <img src={message.imageUrl} alt="Uppladdad läxa" className="message-image" />
-              )}
-              <p>{message.text}</p>
-              <div className="button-container">
-              {message.showSummaryButton && (
-                
-                <button 
-                  onClick={handleSummaryRequest}
-                  className="summary-button"
+
+  return (
+    <QuizControl
+      getAuthParams={getAuthParams}
+      lastUploadedImage={lastUploadedImage}
+      sessionId={sessionId}
+      setIsLoading={setIsLoading}
+      isLoading={isLoading}
+    >
+      {({ isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton, difficulty, setDifficulty, generateQuiz }) => (
+        <div className="chatbot-container">
+          <div className="chat-header">
+            <h2>Chat - {new Date().toLocaleDateString('sv-SE')}</h2>
+            {isQuizMode && (
+              <label className="quiz-difficulty">
+                Quiz-nivå
+                <select
+                  value={difficulty}
+                  onChange={(e) => {
+                    const newDifficulty = e.target.value as 'easy' | 'medium' | 'hard';
+                    setDifficulty(newDifficulty);
+                    generateQuiz(newDifficulty);
+                  }}
                   disabled={isLoading}
                 >
-                  📋 Sammanfatta läxan
-                </button>
-              )}
+                  <option value="easy">Lätt</option>
+                  <option value="medium">Mellan</option>
+                  <option value="hard">Svår</option>
+                </select>
+                {/* Visa användare att quiz laddas*/}
+                 {isLoading && <span className="loading-spinner">⟳</span>}
+              </label>
+            )}
+            {!isQuizMode && (
+            <button onClick={handleDeleteSession} id="delete-session-btn">
+              Radera session 🗑️
+            </button>
+            )}
 
-              {message.showQuizButton && (
+          </div>
+              
+          {isQuizMode ? (
+            <Quiz
+            // key används för att tvinga omrendering av Quiz-komponenten när svårighetsgraden ändras eller nya frågor genereras
+              key={`${difficulty}-${quizQuestions.length}`}
+              questions={quizQuestions}
+              onAnswerSubmit={(answer) => console.log('Svar:', answer)}
+              onQuizEnd={() => setIsQuizMode(false)}
+            />
+          ) : (
+            <div className="chat-messages">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`message ${message.sender === 'user' ? 'user-message' : 'ai-message'}`}
+                >
+                  <div className="message-content">
+                    {message.imageUrl && (
+                      <img src={message.imageUrl} alt="Uppladdad läxa" className="message-image" />
+                    )}
+                    <p>{message.text}</p>
+                    <div className="button-container">
+                      {message.showSummaryButton && (
+                        <button 
+                          onClick={handleSummaryRequest}
+                          className="summary-button"
+                          disabled={isLoading}
+                        >
+                          📋 Sammanfatta läxan
+                        </button>
+                      )}
+
+                      {message.showQuizButton && (
+                        <button
+                          onClick={handleQuizButton}
+                          className="quiz-button"
+                          disabled={isLoading} >
+                          Skapa quiz 
+                        </button>
+                      )}
+                      <span className="message-time">
+                        {message.timestamp.toLocaleTimeString('sv-SE', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </span>
+
+                      <SpeakButton text={message.text} />
+
+                      {/* Ta bort enskilt meddelande */}
+                      {message.id !== 'welcome' && (
+                        <button
+                          onClick={() => handleDeleteMessage(message.id, message.timestamp)}
+                          id="delete-message-btn"
+                          title="Ta bort detta meddelande"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {isLoading && (
+                <div className="message ai-message">
+                  <div className="message-content">
+                    <div className="typing-indicator">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+
+          {!isQuizMode && (
+            <div className="chat-input-container">
+              {imagePreview && (
+                <div className="image-preview">
+                  <img src={imagePreview} alt="Preview" />
+                  <button onClick={handleRemoveImage} className="remove-image-btn">×</button>
+                </div>
+              )}
+              <div className="input-row">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageSelect}
+                  accept="image/*"
+                  capture="environment"
+                  style={{ display: 'none' }}
+                />
                 <button
-                  onClick={handleQuizButton}
-                  className="quiz-button"
-                  disabled={isLoading} >
-                    Skapa quiz 
-                  </button>
-              )}
-              </div>
-              <span className="message-time">
-                {message.timestamp.toLocaleTimeString('sv-SE', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </span>
-            </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="message ai-message">
-            <div className="message-content">
-              <div className="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading}
+                  className="attach-button"
+                  title="Ta foto, välj från galleri eller klistra in bild"
+                >
+                  📷
+                </button>
 
-      <div className="chat-input-container">
-        {imagePreview && (
-          <div className="image-preview">
-            <img src={imagePreview} alt="Preview" />
-            <button onClick={handleRemoveImage} className="remove-image-btn">×</button>
-          </div>
-        )}
-        <div className="input-row">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageSelect}
-            accept="image/*"
-            capture="environment"
-            style={{ display: 'none' }}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-            className="attach-button"
-            title="Ta foto, välj från galleri eller klistra in bild"
-          >
-            📷
-          </button>
-          <textarea
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Skriv din fråga här, klistra in en bild, eller ladda upp från kamera/galleri..."
-            className="chat-input"
-            rows={2}
-            disabled={isLoading}
-          />
-          <button
-            onClick={handleSendMessage}
-            disabled={(!inputText.trim() && !selectedImage) || isLoading}
-            className="send-button"
-          >
-            Skicka
-          </button>
+                <SpeechToTextButton onResult={(text) => setInputText(text)} />
+
+                <textarea
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Skriv din fråga här, klistra in en bild, eller ladda upp från kamera/galleri..."
+                  className="chat-input"
+                  rows={2}
+                  disabled={isLoading}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={(!inputText.trim() && !selectedImage) || isLoading}
+                  className="send-button"
+                >
+                  Skicka
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
-    </div>
+      )}
+    </QuizControl>
   );
 };

@@ -54,7 +54,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, onAnswerSubmit, onQuizEnd
     return (
       <div className="quiz-container">
         <h2>Quiz klart!</h2>
-        <p>Du fick {correctCount} / {questions.length} rätt ({percent}%).</p>
+        <p className='quiz-result'>Du fick {correctCount} / {questions.length} rätt ({percent}%).</p>
 
         <div className="quiz-results">
           {questions.map((q, i) => {

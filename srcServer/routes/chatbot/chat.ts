@@ -1,7 +1,7 @@
 import express from 'express';
 import OpenAI from 'openai';
 import multer from 'multer';
-import { QueryCommand, BatchWriteCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, BatchWriteCommand, PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { db, tableName } from '../../data/dynamoDb.js'
 import { tools, executeTool } from './tools.js';
 /** Denna fil hanterar chattfunktionaliteten för läxhjälpsassistenten. Den tar emot meddelanden och bilder från frontend, skickar dem till OpenAI API och returnerar AI-genererade svar. Om API-nyckeln saknas eller om det uppstår ett fel, används en mock-funktion för att generera svar baserat på användarens meddelande.	*/
@@ -46,7 +46,7 @@ const upload = multer({
 
 router.post('/', upload.single('image'), async (req, res) => {
   try {
-    const { message, familyId, userId, sessionId, mode } = req.body;
+    const { message, familyId, userId, sessionId, mode, difficulty } = req.body;
     const imageFile = req.file;
 
     if (!message || typeof message !== 'string') {
@@ -67,6 +67,16 @@ router.post('/', upload.single('image'), async (req, res) => {
       return res.status(500).json({ error: 'OPENAI_API_KEY saknas' });
     }
 
+    //svårighetsgrad
+    const difficultyLevel = typeof difficulty === 'string' ? difficulty : 'medium';
+const difficultyInstruction =
+  difficultyLevel === 'easy'
+    ? 'Anpassa for nyborjare. Anvand enkla ord, korta meningar och undvik trickfragor.'
+    : difficultyLevel === 'hard'
+      ? 'Gor mer avancerade fragor som kravs resonemang. Anvand mer precisa begrepp.'
+      : 'Normal svarighetsgrad. Balans mellan enkelhet och utmaning.';
+
+
     try {
       let quizContent: OpenAI.Chat.Completions.ChatCompletionContentPart[];
       if (imageFile) {
@@ -83,6 +93,7 @@ router.post('/', upload.single('image'), async (req, res) => {
       //instrukt. till ai
       const quizSystemPrompt = `Du är en lärare som skapar quiz för barn.
   Skapa exakt 5 flervalsfrågor baserat på läxan.
+  Svårighetsgrad: ${difficultyInstruction}
   Returnera ENDAST en JSON-array enligt formatet:
   [
     {
@@ -116,39 +127,6 @@ router.post('/', upload.single('image'), async (req, res) => {
       return res.status(500).json({ error: 'Kunde inte generera quiz' });
     }
   }
-
-    // Om API-nyckel saknas, använd mock-svar
-    if (!process.env.OPENAI_API_KEY) {
-      console.warn('OpenAI API key not found, using mock response');
-      const mockResponse = generateMockResponse(message);
-      
-      // Spara user message
-      await db.send(new PutCommand({
-        TableName: tableName,
-        Item: {
-          pk: pk,
-          sk: `user#${userId}#SESSION#${sessionId}#MSG#${timestamp}`,
-          role: 'user',
-          text: message
-        }
-      }));
-
-      // Spara assistant response
-      await db.send(new PutCommand({
-        TableName: tableName,
-        Item: {
-          pk: pk,
-          sk: `user#${userId}#SESSION#${sessionId}#MSG#${new Date(new Date(timestamp).getTime() + 1000).toISOString()}`,
-          role: 'assistant',
-          text: mockResponse
-        }
-      }));
-
-      return res.json({ 
-        response: mockResponse,
-        timestamp: timestamp
-      });
-    }
 
     // Förbered meddelanden - med eller utan bild
     let userContent: OpenAI.Chat.Completions.ChatCompletionContentPart[];
@@ -276,13 +254,7 @@ router.post('/', upload.single('image'), async (req, res) => {
 
   } catch (error) {
     console.error('Chat error:', error);
-    
-    // Fallback till mock-svar vid fel
-    const mockResponse = generateMockResponse(req.body.message);
-    res.json({ 
-      response: mockResponse + ' (OBS: AI-tjänsten är inte tillgänglig just nu)',
-      timestamp: new Date().toISOString()
-    });
+    res.status(500).json({ error: 'Kunde inte generera svar från AI-tjänsten' });
   }
 });
 
@@ -379,26 +351,7 @@ router.delete('/session', async (req, res) => {
   res.json({ deletedCount: keys.length });
 });
 
-// Hjälpfunktion för mock-svar (ta bort när du integrerar riktig AI)
-function generateMockResponse(message: string): string {
-  const lowerMessage = message.toLowerCase();
-  
-  if (lowerMessage.includes('matte') || lowerMessage.includes('matematik')) {
-    return 'Jag kan hjälpa dig med matte! Vad undrar du över? Addition, subtraktion, multiplikation, division eller något annat? 🔢';
-  } else if (lowerMessage.includes('svenska')) {
-    return 'Svenska är kul! Vill du ha hjälp med grammatik, stavning, läsförståelse eller att skriva berättelser? 📖';
-  } else if (lowerMessage.includes('engelska')) {
-    return 'Great! I can help you with English! What would you like to practice - vocabulary, grammar, or reading? 🌍';
-  } else if (lowerMessage.includes('hej') || lowerMessage.includes('hallå')) {
-    return 'Hej på dig! Vad roligt att du är här. Vilken läxa behöver du hjälp med idag? 😊';
-  } else if (lowerMessage.includes('tack')) {
-    return 'Varsågod! Kom tillbaka när du vill ha mer hjälp. Lycka till med läxorna! 🌟';
-  } else {
-    return 'Det låter intressant! Kan du berätta lite mer om vad du behöver hjälp med? Ju mer du berättar, desto bättre kan jag hjälpa dig! 💡';
-  }
-}
-
-// Delete endpoint, raderar Rendast ett användarmeddelande och AI-svar, 2 items totalt
+// Delete endpoint, raderar Rendast ett användarmeddelande 
 router.delete('/message', async (req, res) => {
   const { familyId, userId, sessionId, timestamp } = req.query;
 
@@ -408,19 +361,13 @@ router.delete('/message', async (req, res) => {
 
   const pk = `family#${familyId}`;
   const userSk = `user#${userId}#SESSION#${sessionId}#MSG#${timestamp}`;
-  const assistantSk = `user#${userId}#SESSION#${sessionId}#MSG#${new Date(new Date(timestamp as string).getTime() + 1000).toISOString()}`;
-
-  try {
-    await db.send(new BatchWriteCommand({
-      RequestItems: {
-        [tableName]: [
-          { DeleteRequest: { Key: { pk, sk: userSk } } },
-          { DeleteRequest: { Key: { pk, sk: assistantSk } } }
-        ]
-      }
+try {
+    await db.send(new DeleteCommand({
+      TableName: tableName,
+      Key: { pk, sk: userSk }
     }));
 
-    res.json({ deletedCount: 2 });
+    res.json({ deletedCount: 1 });
   } catch (error) {
     console.error('Delete message error:', error);
     res.status(500).json({ error: 'Kunde inte ta bort meddelandet' });
