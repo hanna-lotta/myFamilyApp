@@ -30,7 +30,7 @@ Header.tsx ✓ */
 export interface JwtPayload {
   userId: string;
   username: string;
-  role: string;
+  role: 'parent' | 'child';
   familyId: string;
 }
 
