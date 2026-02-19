@@ -89,6 +89,9 @@ export const useQuiz = ({
 
     setIsLoading(true);
 
+    const token = localStorage.getItem('jwt');
+    const authHeader = token ? `Bearer: ${token}` : null;
+
     try {
       const formData = new FormData();
       formData.append('message', 'Generera ett utbildningskviz baserat på denna läxa');
