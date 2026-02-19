@@ -11,13 +11,18 @@ export interface UserBody {
 }
 
 export interface JwtResponse {
-	success: boolean;
+	success?: boolean;
 	token?: string;  // JWT
-	username?: string; // Användarnamn för inloggad användare
+	username?: string; 
 	color?: string; // Användarens personliga färg
-	familyId?: string; // Familjens ID
-	role?: string; // Användarens roll i familjen
+	familyId?: string; 
+	role?: string; 
 	inviteCode?: string; // Invite-kod för nya familjer (endast vid registrering)
+	response?: string; // Chat-svar från AI
+	quiz?: unknown[]; // Quiz-data
+	timestamp?: string; // ISO timestamp
+	items?: unknown[]; // Array av meddelanden
+	deletedCount?: number; // Antal raderade items
 }
 
 // Lookup-item för snabb username -> familyId/userId mapping
@@ -30,11 +35,15 @@ export interface UserLookupItem {
 	userId: string; // user#UUID
 }
 
-// Lookup-item för snabb invite-kod -> familyId mapping
-export interface InviteLookupItem {
-	pk: string; // INVITE#code
+// Lookup-item för barnets invite-kod -> familj + metadata mapping
+export interface ChildInviteLookupItem {
+	pk: string; // CHILD_INVITE#code
 	sk: string; // LOOKUP
 	familyId: string; // family#UUID
+	parentUsername: string; // Föräldern som skapade invite-koden
+	birthDate: string; // YYYY-MM-DD
+	createdAt: string; // ISO timestamp
+	used: boolean; // true när barnet registrerar sig
 }
 
 // Familje-metadata
@@ -51,17 +60,7 @@ export interface FamilyUserItem {
 	pk: string; // family#UUID
 	sk: string; // user#UUID
 	username: string;
-	role: 'parent' | 'child' | 'member'; // Användarens roll
-	color: string; // Användarens personliga färg
+	role: 'parent' | 'child'; 
+	color: string; 
 	createdAt: string; // ISO timestamp
-}
-
-// Deprecated - för bakåtkompatibilitet
-export interface UserItem {
-	pk: string;
-	sk: string;
-	username: string;
-	password: string;
-	accessLevel: string;
-	color?: string; // Användarens personliga färg
 }
