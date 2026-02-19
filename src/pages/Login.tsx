@@ -3,6 +3,7 @@ import '../App.css'
 import './Login.css'
 import { RegisterResponseSchema } from '../data/validation'
 import { useNavigate } from 'react-router'
+import { getAuthHeader } from '../utils/auth'
 import useUserStore from '../store/userStore'
 
 
@@ -232,7 +233,8 @@ const Login = () => {
 										if (!birthDate) return;
 										
 										const token = localStorage.getItem('jwt');
-										if (!token) {
+										const authHeader = getAuthHeader();
+										if (!authHeader) {
 											console.error('No token found');
 											return;
 										}
@@ -242,7 +244,7 @@ const Login = () => {
 												method: 'POST',
 												headers: {
 													'Content-Type': 'application/json',
-													Authorization: `Bearer: ${token}`
+													Authorization: authHeader
 												},
 												body: JSON.stringify({
 													birthDate: birthDate

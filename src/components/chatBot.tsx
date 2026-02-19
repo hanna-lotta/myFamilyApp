@@ -4,6 +4,7 @@ import { Quiz } from './Quiz';
 import { SpeakButton } from './SpeakButton';
 import { SpeechToTextButton } from './SpeechToTextButton';
 import { QuizControl } from './QuizControl';
+import { getAuthHeader, decodeJwt, type JwtPayload } from '../utils/auth';
 
 interface Message {
   id: string;
@@ -13,28 +14,6 @@ interface Message {
   imageUrl?: string;
   showSummaryButton?: boolean;
   showQuizButton?: boolean;
-}
-
-interface JwtPayload {
-  userId: string;
-  username: string;
-  role: string;
-  familyId: string;
-}
-
-// Hjälpfunktion för att dekoda JWT
-function decodeJwt(token: string): JwtPayload | null {
-  try {
-    const base64Url = token.split('.')[1]; // JWT består av tre delar: header, payload och signature. Vi vill ha payload, som är den andra delen (index 1).
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/'); // JWT använder URL-safe base64, så vi måste ersätta '-' med '+' och '_' med '/' för att få en korrekt base64-sträng som kan dekodas.
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
-      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2) // För att dekoda base64-strängen, använder vi atob() som returnerar en sträng där varje tecken representerar en byte. För att få tillbaka den ursprungliga JSON-strängen, måste vi konvertera varje tecken till dess motsvarande bytevärde och sedan till en procentkodad sträng som kan dekodas med decodeURIComponent(). Detta är nödvändigt eftersom JSON-strängen kan innehålla specialtecken som behöver hanteras korrekt.
-    ).join('')); // join('') används för att slå ihop arrayen av procentkodade tecken till en enda sträng som representerar den ursprungliga JSON-payloaden. Utan join('') skulle vi ha en array av strängar istället för en enda sträng, vilket inte är vad vi vill när vi försöker parsas som JSON.
-    return JSON.parse(jsonPayload); // Slutligen, när vi har den ursprungliga JSON-strängen, kan vi använda JSON.parse() för att konvertera den till ett JavaScript-objekt som vi kan arbeta med i vår kod. Detta objekt kommer att ha de fält som definierats i JwtPayload-interfacet, såsom userId, username, role och familyId.
-  } catch (error) {
-    console.error('Failed to decode JWT:', error);
-    return null;
-  }
 }
 
 export const ChatBot: React.FC = () => {
@@ -69,12 +48,6 @@ export const ChatBot: React.FC = () => {
       userId: payload.userId,
       familyId: payload.familyId
     };
-  };
-   // Funktion för att hämta Authorization-headern med JWT-token, som används i våra API-anrop för att autentisera användaren. 
-  const getAuthHeader = (): string | null => {
-    const token = localStorage.getItem('jwt');
-    if (!token) return null;
-    return `Bearer: ${token}`;
   };
 
   useEffect(() => {

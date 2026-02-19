@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router';
 import useUserStore from '../store/userStore';
 import './Header.css';
 import { useState, useEffect, useRef } from 'react';
+import { getAuthHeader } from '../utils/auth';
 
 
 const colorPalette = [
@@ -48,14 +49,14 @@ const Header = () => {
 			return
 		}
 
-		const token = localStorage.getItem('jwt')
-		if (!token) return
+		const authHeader = getAuthHeader()
+		if (!authHeader) return
 
 		try {
 			const response = await fetch('/api/user/delete', {
 				method: 'DELETE',
 				headers: {
-					'Authorization': `Bearer: ${token}`
+					'Authorization': authHeader
 				}
 			})
 
@@ -72,15 +73,15 @@ const Header = () => {
 	}
 
 	const handleColorChange = async (newColor: string) => {
-		const token = localStorage.getItem('jwt')
-		if (!token) return
+		const authHeader = getAuthHeader()
+		if (!authHeader) return
 
 		try {
 			const response = await fetch('/api/user/color', {
 				method: 'PUT',
 				headers: {
 					'Content-Type': 'application/json',
-					'Authorization': `Bearer: ${token}`
+					'Authorization': authHeader
 				},
 				body: JSON.stringify({ color: newColor })
 			})
