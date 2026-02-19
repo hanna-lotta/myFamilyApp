@@ -231,15 +231,6 @@ export const ChatBot: React.FC = () => {
     };
   }, []); // Den tomma beroende-arrayen [] gör att denna useEffect bara körs en gång när komponenten först renderas
 
-  // Använd vår custom hook useQuiz för att hantera quiz-läge och quiz-frågor. Vi skickar in de nödvändiga parametrarna som getAuthParams, lastUploadedImage, sessionId, setIsLoading och isLoading, så att hooken kan hantera all logik relaterad till quiz-funktionaliteten, inklusive att göra API-anrop för att generera quiz-frågor baserat på den senaste uppladdade bilden och hantera quiz-läget i vår komponent. 
-  const { isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton } = useQuiz({
-    getAuthParams,
-    lastUploadedImage,
-    sessionId,
-    setIsLoading,
-    isLoading
-  });
-  
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
