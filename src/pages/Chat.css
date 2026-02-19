@@ -133,10 +133,10 @@
 	color: rgba(255,255,255,.40);
 }
 
-.chat-wrapper button {
-	padding: 0.75rem 1.5rem;
+.chat-wrapper button:not(.summary-button):not(.quiz-button):not(#speak-button):not(#delete-message-btn):not(#delete-session-btn) {
+	padding: 0.375rem 0.75rem;
 	border-radius: 16px;
-	font-size: 0.875rem;
+	font-size: 16px;
 	font-weight: 600;
 	cursor: pointer;
 	transition: all 0.15s ease;
@@ -146,16 +146,16 @@
 	color: white;
 }
 
-.chat-wrapper button:hover {
+.chat-wrapper button:not(.summary-button):not(.quiz-button):not(#speak-button):not(#delete-message-btn):hover {
 	filter: saturate(1.05) brightness(1.02);
 	transform: translateY(-1px);
 }
 
-.chat-wrapper button:active {
+.chat-wrapper button:not(.summary-button):not(.quiz-button):not(#speak-button):not(#delete-message-btn):active {
 	transform: scale(.98);
 }
 
-.chat-wrapper button:disabled {
+.chat-wrapper button:not(.summary-button):not(.quiz-button):not(#speak-button):not(#delete-message-btn):disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 	transform: none;
@@ -203,6 +203,6 @@
 	}
 	
 	.chat-wrapper .message {
-		max-width: 90%;
+		max-width: 100%;
 	}
 }
