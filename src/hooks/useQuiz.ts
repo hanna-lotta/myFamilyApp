@@ -38,6 +38,9 @@ export const useQuiz = ({
 //loading blir true
     setIsLoading(true);
 
+	// Authorization‑header (Bearer: token) skickas nu i chat‑fetchar
+    const token = localStorage.getItem('jwt');
+    const authHeader = token ? `Bearer: ${token}` : null;
 
     //bygger FormData
     try {
@@ -53,7 +56,8 @@ export const useQuiz = ({
       const response = await fetch('/api/chat', {
         method: 'POST',
         body: formData,
-        credentials: 'include'
+        credentials: 'include',
+        headers: authHeader ? { Authorization: authHeader } : undefined // Om authHeader är null, sätt headers till undefined så att fetch inte inkluderar en tom Authorization-header. Detta gör att vi bara skickar Authorization-headern när vi faktiskt har en token, och undviker att skicka en ogiltig header som kan orsaka problem på servern.
       });
 
       if (!response.ok) {
