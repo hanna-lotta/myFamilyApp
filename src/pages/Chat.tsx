@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChatBot } from '../components/chatbot';
+import { ChatBot } from '../components/chatBot';
 import './Chat.css';
 
 export const Chat: React.FC = () => {

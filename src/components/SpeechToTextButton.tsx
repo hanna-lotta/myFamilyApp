@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMicrophone, faCircleStop } from '@fortawesome/free-solid-svg-icons';
 
 type SpeechToTextButtonProps = {
 
@@ -69,8 +71,8 @@ export const SpeechToTextButton: React.FC<SpeechToTextButtonProps> = ({
   };
 
   return (
-    <button onClick={toggleListening} title="Tala in text">
-      {listening ? '⏹️' : '🎤'}
+    <button className="speech-button" onClick={toggleListening} title="Tala in text">
+      {listening ? <FontAwesomeIcon icon={faCircleStop} /> : <FontAwesomeIcon icon={faMicrophone} />}
     </button>
   );
 };

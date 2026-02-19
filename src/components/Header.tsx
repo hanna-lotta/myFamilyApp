@@ -103,7 +103,7 @@ return (
 	<div className='nav-content'>
 		<h1 className='appName'>Lexi chatbot</h1>
 		<nav className='links'>
-			<NavLink to="/my-profile">Min Profil</NavLink>
+			<NavLink to="/my-profile"> Profil</NavLink>
 			<NavLink to="/chat">Chat</NavLink>
 			<div className="username-wrapper" ref={dropdownRef}>
 				{username ? (
