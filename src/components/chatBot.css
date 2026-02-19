@@ -135,6 +135,7 @@
   flex-direction: column;
   gap: 0.75rem;
   padding: 0;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .image-preview {
@@ -326,11 +327,16 @@
 .chat-messages::-webkit-scrollbar-thumb:hover {
   background: rgba(255,255,255,.3);
 }
-.chat-header {
+.chat-frame {
   display: flex;
   justify-content: space-between;
+
+    h2 {
+      font-size: 1.5rem;
+    }
 }
 #delete-session-btn {
+  width: 10rem;
   font-size: 16px;
   padding: 6px 12px;
   
@@ -397,6 +403,10 @@
   font-size: 1.2rem;
   font-style: italic;
   padding:  1.2rem 0 1.2rem 0;
+}
+.attach-button, .send-button, #delete-session-btn, 
+.quiz-option-btn { 
+  touch-action: manipulation; 
 }
 
 
