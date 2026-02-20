@@ -115,6 +115,12 @@ return (
 						}}>{username}</h4>
 						{showDropdown && (
 							<div className="dropdown-menu">
+								<button onClick={() => {
+									navigate('/family');
+									setShowDropdown(false);
+								}}>
+									Hantera familj
+								</button>
 								<button onClick={() => setShowColorPicker(!showColorPicker)}>
 									{showColorPicker ? 'Stäng färgval' : 'Byt färg'}
 								</button>

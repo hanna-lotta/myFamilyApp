@@ -23,6 +23,7 @@ const Login = () => {
 	const [inviteCode, setInviteCode] = useState<string>('')
 	const [birthDate, setBirthDate] = useState('')
 	const [childInvites, setChildInvites] = useState<Array<{code: string, birthDate: string}>>([])
+	const [copiedCode, setCopiedCode] = useState<string | null>(null)
 	
 	const navigate = useNavigate();
 	
@@ -33,6 +34,12 @@ const Login = () => {
 	const generateInviteCode = () => {
 		const raw = crypto.randomUUID().split('-')[0] || '--------';
 		return raw.toUpperCase();
+	};
+
+	const copyToClipboard = (text: string) => {
+		navigator.clipboard.writeText(text);
+		setCopiedCode(text);
+		setTimeout(() => setCopiedCode(null), 2000);
 	};
 	
 	const ValidateForm = () => {
@@ -209,8 +216,15 @@ const Login = () => {
 							<h2>Skapa familj och lägg till barn</h2>
 							<div className="modal-section">
 								<p className="invite-label">Parent-invite</p>
-								<div className="invite-code-display">
+								<div className="code-box">
 									<code>{inviteCode || '--------'}</code>
+									<button 
+										className="copy-btn"
+										onClick={() => copyToClipboard(inviteCode || '')}
+										title="Kopiera"
+									>
+										{copiedCode === inviteCode ? '✓' : 'Kopiera'}
+									</button>
 								</div>
 								<p className="invite-hint">Använd denna för andra föräldrar om du vill.</p>
 							</div>
@@ -275,8 +289,15 @@ const Login = () => {
 										<h4>Skapade barn-invites:</h4>
 										{childInvites.map((invite, index) => (
 											<div key={index} className="invite-item">
-												<div className="invite-code-display">
+												<div className="code-box">
 													<code>{invite.code}</code>
+													<button 
+														className="copy-btn"
+														onClick={() => copyToClipboard(invite.code)}
+														title="Kopiera"
+													>
+														{copiedCode === invite.code ? '✓' : 'Kopiera'}
+													</button>
 												</div>
 												<small>Födelsedata: {new Date(invite.birthDate).toLocaleDateString('sv-SE')}</small>
 												<button

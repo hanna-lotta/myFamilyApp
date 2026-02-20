@@ -264,13 +264,47 @@
 	margin: 0.5rem 0;
 }
 
-.invite-code-display code {
-	font-size: 2rem;
-	font-weight: 700;
+.code-box {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 1rem 0;
+	background: var(--bg1);
+	padding: 1rem;
+	border-radius: 8px;
+	border: 1px solid var(--stroke);
+}
+
+.code-box code {
+	flex: 1;
 	font-family: 'Courier New', monospace;
-	color: var(--accent1);
-	letter-spacing: 0.15em;
-	text-shadow: 0 0 20px rgba(124,58,237,.5);
+	font-weight: bold;
+	color: var(--accent3);
+	font-size: 1.1rem;
+	word-break: break-all;
+}
+
+.copy-btn {
+	padding: 0.6rem 1.2rem;
+	background: linear-gradient(135deg, rgba(124,58,237,.95), rgba(56,189,248,.65));
+	color: white;
+	border: 1px solid rgba(255,255,255,.18);
+	border-radius: 16px;
+	cursor: pointer;
+	font-size: 0.9rem;
+	font-weight: 600;
+	white-space: nowrap;
+	transition: all 0.15s ease;
+	box-shadow: 0 16px 40px rgba(124,58,237,.25);
+}
+
+.copy-btn:hover {
+	filter: saturate(1.05) brightness(1.02);
+	transform: translateY(-1px);
+}
+
+.copy-btn:active {
+	transform: scale(.98);
 }
 
 .invite-hint {

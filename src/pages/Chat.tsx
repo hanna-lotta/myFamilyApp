@@ -6,7 +6,7 @@ export const Chat: React.FC = () => {
   return (
     <div className="chat-page">
       <div className="chat-content">
-        <div className="chat-header">
+        <div className="chatbot-header">
           <h1>🤖 Lexi – din smarta läxkompis</h1>
           <p>Få hjälp med dina läxor - ställ frågor om matte, svenska, engelska och mer!</p>
 		  <br />
