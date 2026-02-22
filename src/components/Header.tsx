@@ -95,8 +95,6 @@ const Header = () => {
   };
   
   const handleOpen = () => {
-    setIsProfileMenuOpen(false);
-    setShowColorPicker(false);
     setIsMenuVisible(true);
     setTimeout(() => setIsMenuOpen(true), 10);
   };
@@ -166,7 +164,7 @@ const Header = () => {
             className="dropdown-item"
             onClick={() => setIsDesktopColorPickerOpen((prev) => !prev)}
           >
-            {isDesktopColorPickerOpen ? 'Stang fargval' : 'Byt farg'}
+            {isDesktopColorPickerOpen ? 'Stäng färgval' : 'Byt färg'}
           </div>
 
           {isDesktopColorPickerOpen && (

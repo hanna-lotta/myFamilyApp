@@ -418,10 +418,9 @@
   color: var(--muted);
   flex-shrink: 0;
   transition: color 0.2s;
+  cursor: pointer;
 }
-.session-delete-btn:hover {
-  color: #ff4444;
-}
+
 
 @keyframes spin {
   from {

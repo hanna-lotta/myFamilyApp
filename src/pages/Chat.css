@@ -65,7 +65,7 @@
 	width: 100%;
 }
 
-.chat-wrapper .messages-container {
+/* .chat-wrapper .messages-container {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
@@ -75,7 +75,7 @@
 	background: rgba(0,0,0,.15);
 	border-radius: 16px;
 	border: 1px solid var(--stroke2);
-}
+} */
 
 .chat-wrapper .message {
 	padding: 0.75rem 1rem;
@@ -84,27 +84,27 @@
 	word-wrap: break-word;
 }
 
-.chat-wrapper .message.user {
+/* .chat-wrapper .message.user {
 	align-self: flex-end;
 	background: linear-gradient(135deg, rgba(124,58,237,.35), rgba(56,189,248,.25));
 	border: 1px solid rgba(255,255,255,.15);
 	color: var(--text);
-}
+} */
 
-.chat-wrapper .message.bot {
+/* .chat-wrapper .message.bot {
 	align-self: flex-start;
 	background: rgba(255,255,255,.08);
 	border: 1px solid var(--stroke2);
 	color: var(--text);
-}
+} */
 
-.chat-wrapper .input-container {
+/* .chat-wrapper .input-container {
 	display: flex;
 	gap: 0.75rem;
 	align-items: center;
-}
+} */
 
-.chat-wrapper input[type="text"],
+/* .chat-wrapper input[type="text"],
 .chat-wrapper textarea {
 	flex: 1;
 	padding: 0.75rem 1rem;
@@ -132,9 +132,9 @@
 .chat-wrapper input[type="text"]::placeholder,
 .chat-wrapper textarea::placeholder {
 	color: rgba(255,255,255,.40);
-}
+} */
 
-.chat-wrapper button:not(.summary-button):not(.quiz-button):not(#speak-button):not(#delete-message-btn):not(#delete-session-btn) {
+.chat-wrapper button:not(.summary-button):not(.quiz-button):not(#speak-button):not(#delete-message-btn) {
 	padding: 0.375rem 0.75rem;
 	border-radius: 16px;
 	font-size: 16px;
@@ -301,12 +301,6 @@
 	white-space: nowrap;
 }
 
-.session-date {
-	font-size: 0.85rem;
-	color: #999;
-	margin-left: 0.5rem;
-	white-space: nowrap;
-}
 
 .chat-sessions-empty,
 .chat-sessions-loading {
