@@ -2,6 +2,8 @@
 	width: 100%;
 	padding: 0;
 	margin-bottom: 2rem;
+	position: relative;
+	z-index: 100000;
 }
 
 .nav-content {
@@ -21,13 +23,30 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+	position: relative;
 }
 
 .links {
+	display: none;
+	position: absolute;
+	top: calc(100% + 0.5rem);
+	right: 2rem;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0.75rem;
+	min-width: 220px;
+	padding: 1rem;
+	border-radius: 16px;
+	background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+	border: 1px solid var(--stroke);
+	box-shadow: var(--shadow2);
+	backdrop-filter: blur(14px);
+	-webkit-backdrop-filter: blur(14px);
+	z-index: 1000;
+}
+
+.links.open {
 	display: flex;
-	flex-direction: row;
-	gap: 1em;
-	align-items: center;
 }
 
 .links a {
@@ -84,7 +103,7 @@
 	font-weight: 500;
 }
 
-.dropdown-menu {
+/* .dropdown-menu {
 	position: absolute;
 	top: 100%;
 	right: 0;
@@ -98,19 +117,48 @@
 	min-width: 150px;
 	z-index: 1000;
 	overflow: hidden;
+} */
+
+.desktop-dropdown {
+	display: none;
+	position: absolute;
+	top: 100%;
+	right: 0;
+	background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+	border: 1px solid var(--stroke);
+	border-radius: 16px;
+	box-shadow: var(--shadow2);
+	backdrop-filter: blur(14px);
+	-webkit-backdrop-filter: blur(14px);
+	margin-top: 0.5rem;
+	min-width: 160px;
+	z-index: 1000;
+	overflow: hidden;
 }
 
-.dropdown-menu button {
-	display: block;
-	width: 100%;
-	padding: 0.75rem 1rem;
-	border: none;
-	background: none;
-	text-align: left;
-	cursor: pointer;
-	font-size: 0.95rem;
+.dropdown-menu {
+    position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: auto;
+    width: 70%;
+	height: 100dvh;
+	background: var(--bg1);
+	border-left: 1px solid var(--stroke);
+	box-shadow: var(--shadow2);
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
 	color: var(--text);
-	transition: background 0.2s;
+    transform: translateX(100%);
+    opacity: 0;
+    transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1),
+                opacity 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+	z-index: 100001;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	padding: 1rem;
 }
 
 .dropdown-menu button:hover {
@@ -124,6 +172,81 @@
 
 .dropdown-menu button.delete-btn:hover {
 	background: rgba(251,113,133,.15);
+}
+.dropdown-menu.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.dropdown-menu.hide {
+    transform: translateX(100%);
+    opacity: 0;
+}
+
+.dropdown-container,
+.dropdown-bottom {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.profile-buttons {
+	display: none;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.profile-buttons.show {
+	display: flex;
+}
+
+.dropdown-close-row {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 0.5rem;
+}
+
+.dropdown-close-btn {
+	background: transparent;
+	border: none;
+	color: var(--text);
+	cursor: pointer;
+	padding: 0.25rem;
+}
+
+.dropdown-close-icon {
+	font-size: 1.3rem;
+}
+
+.dropdown-item,
+#logout-btn,
+#login-btn {
+	padding: 0.75rem 1rem;
+	border-radius: 12px;
+	border: 1px solid var(--stroke2);
+	background: rgba(255,255,255,.05);
+	color: var(--text);
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.dropdown-item:hover,
+#logout-btn:hover,
+#login-btn:hover {
+	background: rgba(255,255,255,.12);
+	border-color: rgba(255,255,255,.2);
+}
+
+.dropdown-profile {
+	cursor: default;
+	font-weight: 600;
+}
+
+.dropdown-profile-btn {
+	all: unset;
+	display: block;
+	width: 100%;
+	cursor: pointer;
 }
 
 .color-picker {
@@ -152,4 +275,42 @@
 	font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 	color: var(--text);
 	letter-spacing: 0.02em;
+	text-align: center;
+}
+.menu-icon,
+.hamburger-icon {
+	display: block;
+  font-size: 1.3rem;
+  cursor: pointer;
+	color: var(--text);
+}
+
+@media (min-width: 769px) {
+	.links {
+		display: flex;
+		position: static;
+		flex-direction: row;
+		align-items: center;
+		gap: 1rem;
+		padding: 0;
+		min-width: auto;
+		background: transparent;
+		border: none;
+		box-shadow: none;
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
+	}
+
+	.menu-icon,
+	.hamburger-icon {
+		display: none;
+	}
+
+	.dropdown-menu {
+		display: none;
+	}
+
+	.desktop-dropdown {
+		display: block;
+	}
 }

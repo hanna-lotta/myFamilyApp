@@ -374,4 +374,75 @@ try {
   }
 });
 
+//Get endpoint-hämta tidigare sessioner med första orden av första meddelandet
+router.get('/sessions', async (req, res) => {
+  try {
+    const { familyId, userId } = req.query;
+
+    if (!familyId || !userId) {
+      return res.status(400).json({ error: 'familyId och userId krävs' });
+    }
+
+    const pk = `family#${familyId}`;
+    const skPrefix = `user#${userId}#SESSION#`;
+
+    // Hämta alla sessioner
+    const result = await db.send(new QueryCommand({
+      TableName: tableName,
+      KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :sk)",
+      ExpressionAttributeNames: {
+        "#pk": "pk",
+        "#sk": "sk"
+      },
+      ExpressionAttributeValues: {
+        ":pk": pk,
+        ":sk": skPrefix
+      }
+    }));
+
+    const sessionMap = new Map<string, { message: string; timestamp: number }>();
+    
+    console.log('Raw items from DB:', result.Items?.length);
+    
+    // Extrahera sessioner och första användarmeddelandet för varje
+    result.Items?.forEach((item: any) => {
+      console.log('Processing item:', { sk: item.sk, role: item.role, text: item.text });
+      const match = item.sk.match(/#SESSION#([^#]+)#MSG#(\d+)/);
+      if (match && item.role === 'user') {
+        const sessionId = match[1];
+        const timestamp = parseInt(match[2]);
+        const messageText = item.text as string;
+        
+        console.log('Found user message:', { sessionId, timestamp, messageText });
+        
+        // Spara bara första (lägsta timestamp) meddelandet per session
+        if (!sessionMap.has(sessionId) || timestamp < sessionMap.get(sessionId)!.timestamp) {
+          sessionMap.set(sessionId, {
+            message: messageText,
+            timestamp
+          });
+        }
+      }
+    });
+
+    // Konvertera till array och sortera efter senaste
+    const sessions = Array.from(sessionMap.entries())
+      .map(([sessionId, { message }]) => ({
+        sessionId,
+        title: (message || 'Konversation')
+        .split(/[\s.!?]+/)  // Dela på mellanslag, punkt, frågetecken osv
+        .slice(0, 5)        // Ta första 5 element
+        .join(' ')          // Slå ihop med mellanslag
+            }))
+      .sort((a, b) => a.sessionId.localeCompare(b.sessionId));
+
+    console.log('Returning sessions:', sessions);
+    res.json(sessions);
+  } catch (error) {
+    console.error('Get sessions error:', error);
+    res.status(500).json({ error: 'Kunde inte hämta sessioner', details: String(error) });
+  }
+});
+
+
 export default router;
