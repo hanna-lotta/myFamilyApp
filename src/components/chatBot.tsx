@@ -4,6 +4,9 @@ import { Quiz } from './Quiz';
 import { SpeakButton } from './SpeakButton';
 import { SpeechToTextButton } from './SpeechToTextButton';
 import { QuizControl } from './QuizControl';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCamera, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+
 import { getAuthHeader, decodeJwt, type JwtPayload } from '../utils/auth';
 
 interface Message {
@@ -323,7 +326,7 @@ export const ChatBot: React.FC = () => {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -406,7 +409,7 @@ export const ChatBot: React.FC = () => {
     >
       {({ isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton, difficulty, setDifficulty, generateQuiz }) => (
         <div className="chatbot-container">
-          <div className="chat-header">
+          <div className="chat-frame">
             <h2>Chat - {new Date().toLocaleDateString('sv-SE')}</h2>
             {isQuizMode && (
               <label className="quiz-difficulty">
@@ -430,7 +433,7 @@ export const ChatBot: React.FC = () => {
             )}
             {!isQuizMode && (
             <button onClick={handleDeleteSession} id="delete-session-btn">
-              Radera session 🗑️
+              Radera session
             </button>
             )}
 
@@ -463,7 +466,7 @@ export const ChatBot: React.FC = () => {
                           className="summary-button"
                           disabled={isLoading}
                         >
-                          📋 Sammanfatta läxan
+                        Sammanfatta
                         </button>
                       )}
 
@@ -475,6 +478,7 @@ export const ChatBot: React.FC = () => {
                           Skapa quiz 
                         </button>
                       )}
+                      <div className='timestamp-speak-box'>
                       <span className="message-time">
                         {message.timestamp.toLocaleTimeString('sv-SE', { 
                           hour: '2-digit', 
@@ -493,7 +497,9 @@ export const ChatBot: React.FC = () => {
                         >
                           🗑️
                         </button>
+                        
                       )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -536,26 +542,27 @@ export const ChatBot: React.FC = () => {
                   className="attach-button"
                   title="Ta foto, välj från galleri eller klistra in bild"
                 >
-                  📷
+                  <FontAwesomeIcon icon={faCamera} />
                 </button>
 
                 <SpeechToTextButton onResult={(text) => setInputText(text)} />
-
+              
                 <textarea
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyDown}
                   placeholder="Skriv din fråga här, klistra in en bild, eller ladda upp från kamera/galleri..."
                   className="chat-input"
                   rows={2}
                   disabled={isLoading}
+                  
                 />
                 <button
                   onClick={handleSendMessage}
                   disabled={(!inputText.trim() && !selectedImage) || isLoading}
                   className="send-button"
                 >
-                  Skicka
+                  <FontAwesomeIcon icon={faPaperPlane} />
                 </button>
               </div>
             </div>

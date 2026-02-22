@@ -23,7 +23,7 @@ const MyProfile = () => {
       flexDirection: 'column',
       alignItems: 'center', 
       justifyContent: 'center', 
-      minHeight: '100vh',
+      minHeight: '100dvh',
       padding: '2rem'
     }}>
       <div style={{

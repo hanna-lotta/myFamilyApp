@@ -38,11 +38,13 @@ body {
 		linear-gradient(180deg, var(--bg0), var(--bg1));
 	color: var(--text);
 	min-height: 100vh;
+	min-height: 100dvh;
 	overflow-x: hidden;
 }
 
 #root {
 	min-height: 100vh;
+	min-height: 100dvh;
 	display: flex;
 	flex-direction: column;
 }
