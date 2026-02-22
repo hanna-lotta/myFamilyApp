@@ -2,21 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChatBot } from '../components/chatBot';
 import './Chat.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faClockRotateLeft, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faClockRotateLeft, faXmark, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router';
 import useClickOutside from '../hooks/useClickOutside';
+import type { Session, Message, JwtPayload } from '../types/types'; 
 
-interface Session {
-  sessionId: string;
-  title?: string;
-}
 
-interface JwtPayload {
-  userId: string;
-  username: string;
-  role: string;
-  familyId: string;
-}
+
 
 function decodeJwt(token: string): JwtPayload | null {
   try {
@@ -53,6 +45,13 @@ export const Chat: React.FC = () => {
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
+   const [messages, setMessages] = useState<Message[]>([]);
+
+  // Använd samma session per dag istället för ny vid varje reload
+    const [sessionId] = useState(() => {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      return `session_${today}`;
+    });
 
   //hämtar tidigare konversationer 
   useEffect(() => {
@@ -128,6 +127,35 @@ export const Chat: React.FC = () => {
     setIsSessionsOpen(false);
   };
 
+  //radera hel chat session
+  
+  //visar bekräftelseruta, klickarman på avbryt så avslutas funkt.
+    const handleDeleteSession = async (sessionIdToDelete: string) => {
+      if (!window.confirm('Är du säker? Det går inte att ångra. Alla meddelanden i denna session kommer att raderas.')) {
+        return;
+      }
+  
+      const authParams = getAuthParams();
+      if (!authParams) return;
+  
+      try {
+        const response = await fetch(
+          `/api/chat/session?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${sessionIdToDelete}`,
+          {
+            method: 'DELETE',
+            credentials: 'include'
+          }
+        );
+  
+        if (response.ok) {
+          setSessions(sessions.filter(s => s.sessionId !== sessionIdToDelete));
+        }
+      } catch (error) {
+        console.error('Kunde inte ta bort session:', error);
+       
+      }
+    };
+
 
 
   return (
@@ -181,6 +209,19 @@ export const Chat: React.FC = () => {
                       onClick={() => handleSessionSelect(session.sessionId)}
                     >
                       <span className="session-title">{session.title || 'Konversation'}</span>
+
+                       
+
+                       <button
+                        className="session-delete-btn"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Förhindra att handleSessionSelect triggas
+                          handleDeleteSession(session.sessionId);
+                        }}
+                        aria-label="Ta bort session"
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
                     </div>
                   ))}
                 </div>

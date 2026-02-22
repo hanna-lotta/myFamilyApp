@@ -341,16 +341,6 @@
       font-size: 1.5rem;
     }
 }
-#delete-session-btn {
-    font-size:12px;
-    padding: 0;
-    width: 5rem;
-    background: transparent;
-    border: none;
-    background-color: transparent;
-    color: var(--text);
-  
-}
 .quiz-difficulty {
   display: flex;
   gap: 0.5rem;
@@ -414,11 +404,24 @@
   font-style: italic;
   padding:  1.2rem 0 1.2rem 0;
 }
-.attach-button, .send-button, #delete-session-btn, 
+.attach-button, .send-button, 
 .quiz-option-btn { 
   touch-action: manipulation; 
 }
-
+.chat-sessions-item:hover  {
+  opacity: 1;
+}
+.session-delete-btn {
+  background: none;
+  padding:0;
+  border: none;
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+.session-delete-btn:hover {
+  color: #ff4444;
+}
 
 @keyframes spin {
   from {

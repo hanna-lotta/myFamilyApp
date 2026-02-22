@@ -6,24 +6,11 @@ import { SpeechToTextButton } from './SpeechToTextButton';
 import { QuizControl } from './QuizControl';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCamera, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { useLocation } from 'react-router';
+import type { Message, JwtPayload } from '../types/types';
 
 
-interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'ai';
-  timestamp: Date;
-  imageUrl?: string;
-  showSummaryButton?: boolean;
-  showQuizButton?: boolean;
-}
 
-interface JwtPayload {
-  userId: string;
-  username: string;
-  role: string;
-  familyId: string;
-}
 
 // Hjälpfunktion för att dekoda JWT
 function decodeJwt(token: string): JwtPayload | null {
@@ -41,23 +28,27 @@ function decodeJwt(token: string): JwtPayload | null {
 }
 
 export const ChatBot: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+ 
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [lastUploadedImage, setLastUploadedImage] = useState<File | null>(null);
+  
   // Använd samma session per dag istället för ny vid varje reload
   const [sessionId] = useState(() => {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     return `session_${today}`;
   });
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  const [messages, setMessages] = useState<Message[]>([]);
 
   // Hjälpfunktion för att få userId och familyId från JWT
   const getAuthParams = (): { userId: string; familyId: string } | null => {
@@ -171,34 +162,7 @@ export const ChatBot: React.FC = () => {
     }
   };
 
-//radera hel chat session
 
-//visar bekräftelseruta, klickarman på avbryt så avslutas funkt.
-  const handleDeleteSession = async () => {
-    if (!window.confirm('Är du säker? Det går inte att ångra. Alla meddelanden i denna session kommer att raderas.')) {
-      return;
-    }
-
-    const authParams = getAuthParams();
-    if (!authParams) return;
-
-    try {
-      const response = await fetch(
-        `/api/chat/session?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${sessionId}`,
-        {
-          method: 'DELETE',
-          credentials: 'include'
-        }
-      );
-
-      if (response.ok) {
-        setMessages([]);
-      }
-    } catch (error) {
-      console.error('Kunde inte ta bort session:', error);
-     
-    }
-  };
 
 
   // Hantera inklistring av bilder
@@ -417,6 +381,42 @@ export const ChatBot: React.FC = () => {
     }
   };
 
+  const { loadSessionId } = useLocation().state || {};
+
+useEffect(() => {
+  if (loadSessionId) {
+    const loadPreviousSession = async () => {
+      const authParams = getAuthParams();
+      if (!authParams) return;
+
+      try {
+        const response = await fetch(
+          `/api/chat/messages?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${loadSessionId}`,
+          { credentials: 'include' }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const loadedMessages: Message[] = data.items.map((item: any, index: number) => ({
+            id: `${index}`,
+            text: item.text,
+            sender: item.role === 'user' ? 'user' : 'ai',
+            timestamp: new Date(item.sk.split('#MSG#')[1])
+          }));
+
+          setMessages(loadedMessages);
+        } else {
+          console.log('Failed to fetch previous session messages');
+        }
+      } catch (error) {
+        console.error('Error loading previous session:', error);
+      }
+    };
+
+    loadPreviousSession();
+  }
+}, [loadSessionId]);
+
 
   return (
     <QuizControl
@@ -450,11 +450,7 @@ export const ChatBot: React.FC = () => {
                  {isLoading && <span className="loading-spinner">⟳</span>}
               </label>
             )}
-            {!isQuizMode && (
-            <button onClick={handleDeleteSession} id="delete-session-btn">
-              Radera session
-            </button>
-            )}
+            
 
           </div>
               

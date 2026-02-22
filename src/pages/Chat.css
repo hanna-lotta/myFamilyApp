@@ -216,7 +216,7 @@
 	-webkit-backdrop-filter: none;
 	color: var(--text);
 	transform: translateX(-100%);
-	opacity: 0;
+	opacity: 10;
 	transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1),
 	            opacity 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
 	z-index: 100001;
