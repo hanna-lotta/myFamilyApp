@@ -13,7 +13,7 @@ const router: Router = express.Router();
  * GET /api/family/invite-code
  * 
  * Hämtar invite-koden för användarens familj.
- * Alla familjemedlemmar kan hämta koden för att bjuda in nya medlemmar.
+ * Endast föräldrar kan hämta koden för att bjuda in nya medlemmar.
  * 
  * Header: Authorization: Bearer: <token>
  * Response: { inviteCode: string } | { error: string }
@@ -24,6 +24,12 @@ router.get('/invite-code', async (req: Request<{}, {}, {}>, res: Response<Invite
 	const payload = validateJwt(req.headers.authorization);
 	if (!payload) {
 		res.status(401).send({ error: 'Unauthorized' });
+		return;
+	}
+
+	// Endast föräldrar kan hämta invite-kod
+	if (payload.role !== 'parent') {
+		res.status(403).send({ error: 'Only parents can view invite codes' });
 		return;
 	}
 

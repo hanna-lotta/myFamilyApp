@@ -6,8 +6,9 @@ import { SpeechToTextButton } from './SpeechToTextButton';
 import { QuizControl } from './QuizControl';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCamera, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import Tesseract from 'tesseract.js';
 
-import { getAuthHeader, decodeJwt, type JwtPayload } from '../utils/auth';
+import { getAuthHeader, decodeJwt } from '../utils/auth';
 
 interface Message {
   id: string;
@@ -26,6 +27,9 @@ export const ChatBot: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [lastUploadedImage, setLastUploadedImage] = useState<File | null>(null);
+  const [ocrText, setOcrText] = useState('');
+  const [isOcrProcessing, setIsOcrProcessing] = useState(false);
+  const [showOcrEditor, setShowOcrEditor] = useState(false);
   // Använd samma session per dag 
   const [sessionId] = useState(() => {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -64,7 +68,7 @@ export const ChatBot: React.FC = () => {
       if (!authParams) {
         return;
       }
-	  //Authorization‑header (Bearer: token) skickas nu i chat‑fetchar: getAuthHeader() används för att hämta JWT-token från localStorage och formatera den som en Authorization-header
+    // Authorization-header skickas nu i chat-fetchar: getAuthHeader() hämtar JWT-token från localStorage.
       try { 
         const authHeader = getAuthHeader();
         const headers: HeadersInit = authHeader ? { Authorization: authHeader } : {};
@@ -125,13 +129,18 @@ export const ChatBot: React.FC = () => {
 
     const authParams = getAuthParams();
     if (!authParams) return;
+    const authHeader = getAuthHeader();
+    if (!authHeader) return;
 
     try {
       const response = await fetch(
         `/api/chat/message?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${sessionId}&timestamp=${timestamp.toISOString()}`,
         {
           method: 'DELETE',
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            Authorization: authHeader
+          }
         }
       );
 
@@ -156,13 +165,18 @@ export const ChatBot: React.FC = () => {
 
     const authParams = getAuthParams();
     if (!authParams) return;
+    const authHeader = getAuthHeader();
+    if (!authHeader) return;
 
     try {
       const response = await fetch(
         `/api/chat/session?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${sessionId}`,
         {
           method: 'DELETE',
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            Authorization: authHeader
+          }
         }
       );
 
@@ -194,6 +208,10 @@ export const ChatBot: React.FC = () => {
               setImagePreview(reader.result as string); // Sätt förhandsvisningen av den klistrade bilden i state, så att den kan visas i chatten. 
             };
             reader.readAsDataURL(file); // Läs in den klistrade bilden som en data-URL, vilket gör det enkelt att visa den i chatten innan den skickas till servern. Genom att använda FileReader för att läsa in bilden som en data-URL, kan vi snabbt och enkelt skapa en förhandsvisning av den klistrade bilden i chatten.
+            
+            // Starta OCR-behandling för klistrad bild
+            performOCR(file);
+            
             e.preventDefault(); // Förhindra standardbeteendet för klistra in, vilket kan inkludera att försöka klistra in bilden som text eller på annat sätt hantera det på ett sätt som inte är önskvärt i vår chat-komponent. 
             break; // Efter att ha hanterat den första klistrade bilden, bryt loopen eftersom vi bara vill hantera en bild åt gången i chatten. 
           }
@@ -220,12 +238,52 @@ export const ChatBot: React.FC = () => {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+      
+      // Starta OCR-behandling
+      performOCR(file);
+    }
+  };
+
+  // OCR-funktion med Tesseract.js
+  const performOCR = async (imageFile: File) => {
+    setIsOcrProcessing(true);
+    setShowOcrEditor(false);
+    setOcrText('');
+
+    try {
+      const imageUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve(reader.result as string);
+        };
+        reader.readAsDataURL(imageFile);
+      });
+
+      // Använd Tesseract.js för att extrahera text
+      const result = await Tesseract.recognize(
+        imageUrl,
+        'swe+eng', // Svenska och engelska
+        {
+          logger: (m) => console.log('OCR progress:', m.status, m.progress),
+        }
+      );
+
+      const extractedText = result.data.text;
+      setOcrText(extractedText);
+      setShowOcrEditor(true);
+      setIsOcrProcessing(false);
+    } catch (error) {
+      console.error('OCR error:', error);
+      setIsOcrProcessing(false);
+      alert('Kunde inte extrahera text från bilden. Prova en annan bild.');
     }
   };
 
   const handleRemoveImage = () => {
     setSelectedImage(null);
     setImagePreview(null);
+    setOcrText('');
+    setShowOcrEditor(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -264,6 +322,8 @@ export const ChatBot: React.FC = () => {
     setInputText('');
     setSelectedImage(null);
     setImagePreview(null);
+    setOcrText('');
+    setShowOcrEditor(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -280,8 +340,13 @@ export const ChatBot: React.FC = () => {
       formData.append('userId', authParams.userId);
       formData.append('sessionId', sessionId);
       
-      if (imageToSend) {
+      // Skicka bara bilden om vi INTE har OCR-text (dvs om användaren inte klistrade in/fotograferade)
+      // Om vi har OCR-text skickar vi bara texten, inte bilden för att spara bandbredd
+      if (imageToSend && !ocrText) {
         formData.append('image', imageToSend);
+        console.log('📷 Sending image + text to server');
+      } else if (ocrText) {
+        console.log('📝 Sending OCR text only (no image)');
       }
 
       const response = await fetch('/api/chat', {
@@ -406,6 +471,7 @@ export const ChatBot: React.FC = () => {
       sessionId={sessionId}
       setIsLoading={setIsLoading}
       isLoading={isLoading}
+      lastUserMessage={messages.reverse().find(m => m.sender === 'user')?.text || ''}
     >
       {({ isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton, difficulty, setDifficulty, generateQuiz }) => (
         <div className="chatbot-container">
@@ -527,6 +593,52 @@ export const ChatBot: React.FC = () => {
                   <button onClick={handleRemoveImage} className="remove-image-btn">×</button>
                 </div>
               )}
+              
+              {/* OCR-texteredigerare */}
+              {showOcrEditor && !isOcrProcessing && (
+                <div className="ocr-editor">
+                  <div className="ocr-header">
+                    <h4>📝 Extraherad text från bilden (redigera vid behov):</h4>
+                    {isOcrProcessing && <p className="ocr-loading">Bearbetar text...</p>}
+                  </div>
+                  <textarea
+                    value={ocrText}
+                    onChange={(e) => setOcrText(e.target.value)}
+                    placeholder="Extraherad text visas här..."
+                    className="ocr-textarea"
+                    rows={4}
+                    disabled={isOcrProcessing || isLoading}
+                  />
+                  <div className="ocr-actions">
+                    <button 
+                      onClick={() => {
+                        setInputText(ocrText);
+                        setShowOcrEditor(false);
+                      }}
+                      disabled={isLoading || !ocrText.trim()}
+                      className="ocr-send-btn"
+                    >
+                      ✓ Använd denna text
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setShowOcrEditor(false);
+                        setOcrText('');
+                      }}
+                      className="ocr-cancel-btn"
+                    >
+                      ✕ Avbryt
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isOcrProcessing && (
+                <div className="ocr-loading-container">
+                  <p>🔄 Läser in text från bilden...</p>
+                </div>
+              )}
+              
               <div className="input-row">
                 <input
                   type="file"

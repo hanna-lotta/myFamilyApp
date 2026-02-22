@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router';
 import useUserStore from '../store/userStore';
 import './Header.css';
 import { useState, useEffect, useRef } from 'react';
-import { getAuthHeader } from '../utils/auth';
+import { getAuthHeader, decodeJwt } from '../utils/auth';
 
 
 const colorPalette = [
@@ -21,6 +21,11 @@ const Header = () => {
 	const dropdownRef = useRef<HTMLDivElement>(null)
 	
 	const navigate = useNavigate()
+
+	// Kolla om användaren är förälder
+	const authHeader = getAuthHeader()
+	const userRole = authHeader ? decodeJwt(authHeader.replace('Bearer: ', ''))?.role : null
+	const isParent = userRole === 'parent'
 
 	// Stäng dropdown när man klickar utanför
 	useEffect(() => {
@@ -115,12 +120,14 @@ return (
 						}}>{username}</h4>
 						{showDropdown && (
 							<div className="dropdown-menu">
-								<button onClick={() => {
-									navigate('/family');
-									setShowDropdown(false);
-								}}>
-									Hantera familj
-								</button>
+								{isParent && (
+									<button onClick={() => {
+										navigate('/family');
+										setShowDropdown(false);
+									}}>
+										Bjud in familj
+									</button>
+								)}
 								<button onClick={() => setShowColorPicker(!showColorPicker)}>
 									{showColorPicker ? 'Stäng färgval' : 'Byt färg'}
 								</button>

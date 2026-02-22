@@ -10,7 +10,7 @@ export const PayloadSchema = z.object({
   userId: z.string(),
   username: z.string(),
   role: z.enum(['parent', 'child']),
-  familyId: familyIdSchema
+  familyId: z.string() // JWT använder bara UUID utan "family#" prefix
 });
 export type Payload = z.infer<typeof PayloadSchema>; // extrahera datatyp (type signature)
 

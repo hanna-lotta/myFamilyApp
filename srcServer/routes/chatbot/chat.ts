@@ -77,7 +77,7 @@ const openai = new OpenAI({
 // Konfigurera multer för bilduppladdning
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // Max 5MB
+  limits: { fileSize: 20 * 1024 * 1024 }, // Max 20MB (ökad från 5MB för att stöda större bilder)
     fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
