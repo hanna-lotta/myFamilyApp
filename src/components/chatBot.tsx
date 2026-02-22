@@ -84,12 +84,18 @@ export const ChatBot: React.FC = () => {
 
         if (response.ok) {
           const data = await response.json();
-          const loadedMessages: Message[] = data.items.map((item: any, index: number) => ({
-            id: `${index}`,
-            text: item.text,
-            sender: item.role === 'user' ? 'user' : 'ai',
-            timestamp: new Date(item.sk.split('#MSG#')[1]) // Vi antar att sk i DynamoDB är i formatet "MSG#<timestamp>", så vi splittrar på '#MSG#' och tar den andra delen (index 1) för att få timestampen, som vi sedan konverterar till ett Date-objekt. Detta gör att vi kan sortera och visa meddelandena i kronologisk ordning baserat på när de skickades. Vi använder sk för att lagra timestamp eftersom det gör det enkelt att sortera meddelanden i DynamoDB, och genom att extrahera timestampen från sk kan vi visa den i vår frontend utan att behöva lagra den som ett separat fält i databasen. 
-          }));
+          const loadedMessages: Message[] = data.items.map((item: any, index: number) => {
+            const sk: string | undefined = typeof item.sk === 'string' ? item.sk : undefined;
+            const skTimestamp = sk && sk.includes('#MSG#') ? sk.split('#MSG#')[1] : undefined;
+            const fallbackTimestamp = item.timestamp || item.createdAt || new Date().toISOString();
+
+            return {
+              id: `${index}`,
+              text: item.text,
+              sender: item.role === 'user' ? 'user' : 'ai',
+              timestamp: new Date(skTimestamp || fallbackTimestamp)
+            };
+          });
 
           // Lägg alltid till välkomstmeddelandet först
           const welcomeMessage: Message = {
