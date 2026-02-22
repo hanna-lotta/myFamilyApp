@@ -26,11 +26,18 @@ export interface JwtPayload  {
 }
 
 export function validateJwt(authHeader: string | undefined): JwtPayload | null {
-	// 'Bearer: token'
 	if (!authHeader) {
 		return null
-	  }
-	  const token: string = authHeader.substring(8)  // alternativ: slice, split, // 'Bearer: 
+	}
+
+	const trimmedHeader = authHeader.trim(); // Tar bort eventuella extra mellanslag
+	const bearerMatch = /^Bearer:\s+(.+)$/i.exec(trimmedHeader); //Validerar att headern verkligen börjar med Bearer: (med regex)
+	
+	if (!bearerMatch || !bearerMatch[1]) {
+		return null; //Ger null direkt om formatet är fel (istället för att skicka skräp-token till JWT-verifiering)
+	}
+	
+	const token = bearerMatch[1].trim();
 	  try {
 		// Anropar jwt.verify (synchronous i jwt-biblioteket) som verifierar signaturen med hemligheten från env och returnerar det dekodade payload-objektet.
 		const decodedPayload = jwt.verify(token, process.env.JWT_SECRET || '') 

@@ -14,8 +14,8 @@ interface UseQuizParams {
   sessionId: string;
   setIsLoading: (v: boolean) => void;
   isLoading: boolean;
-  difficulty: 'easy' | 'medium' | 'hard'; 
-  
+  difficulty: 'easy' | 'medium' | 'hard';
+  lastUserMessage?: string; // Texten från sista user-meddelande
 }
 
 export const useQuiz = ({
@@ -24,14 +24,14 @@ export const useQuiz = ({
   sessionId,
   difficulty,
   setIsLoading,
-  isLoading, 
-  
+  isLoading,
+  lastUserMessage
 }: UseQuizParams) => {
   const [isQuizMode, setIsQuizMode] = useState(false);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
 
   const handleQuizButton = async () => {
-    if (!lastUploadedImage || isLoading) return;
+    if (!lastUserMessage || isLoading) return;
 
     const authParams = getAuthParams();
     if (!authParams) {
@@ -44,8 +44,13 @@ export const useQuiz = ({
     const authHeader = getAuthHeader();
     try {
       const formData = new FormData();
-      formData.append('message', 'Generera ett utbildningskviz baserat på denna läxa');
-      formData.append('image', lastUploadedImage);
+      const quizMessage = lastUserMessage.trim() || 'Generera ett utbildningskviz baserat på denna läxa';
+      formData.append('message', quizMessage);
+      // Skicka bara bilden om vi INTE har extraherad text (OCR)
+      // Om vi har OCR-text behöver vi inte bilden
+      if (lastUploadedImage && !lastUserMessage) {
+        formData.append('image', lastUploadedImage);
+      }
       formData.append('familyId', authParams.familyId);
       formData.append('userId', authParams.userId);
       formData.append('sessionId', sessionId);
