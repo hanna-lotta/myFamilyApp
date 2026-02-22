@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getAuthHeader } from '../utils/auth';
 
 export interface QuizQuestion {
   question: string;
@@ -40,6 +41,7 @@ export const useQuiz = ({
 
     setIsLoading(true);
 
+    const authHeader = getAuthHeader();
     try {
       const formData = new FormData();
       formData.append('message', 'Generera ett utbildningskviz baserat på denna läxa');
@@ -53,7 +55,8 @@ export const useQuiz = ({
       const response = await fetch('/api/chat', {
         method: 'POST',
         body: formData,
-        credentials: 'include'
+        credentials: 'include',
+        headers: authHeader ? { Authorization: authHeader } : undefined
       });
 
       if (!response.ok) {
@@ -86,6 +89,8 @@ export const useQuiz = ({
 
     setIsLoading(true);
 
+    const authHeader = getAuthHeader();
+
     try {
       const formData = new FormData();
       formData.append('message', 'Generera ett utbildningskviz baserat på denna läxa');
@@ -99,7 +104,8 @@ export const useQuiz = ({
       const response = await fetch('/api/chat', {
         method: 'POST',
         body: formData,
-        credentials: 'include'
+        credentials: 'include',
+        headers: authHeader ? { Authorization: authHeader } : undefined // Om authHeader är null, sätt headers till undefined så att fetch inte inkluderar en tom Authorization-header. Detta gör att vi bara skickar Authorization-headern när vi faktiskt har en token, och undviker att skicka en ogiltig header som kan orsaka problem på servern.
       });
 
       if (!response.ok) {
