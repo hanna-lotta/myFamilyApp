@@ -9,6 +9,7 @@ import { faCamera, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
 import Tesseract from 'tesseract.js';
 
 import { getAuthHeader, decodeJwt } from '../utils/auth';
+import { useLocation } from 'react-router';
 
 interface Message {
   id: string;
@@ -21,7 +22,7 @@ interface Message {
 }
 
 export const ChatBot: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+ 
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -30,17 +31,21 @@ export const ChatBot: React.FC = () => {
   const [ocrText, setOcrText] = useState('');
   const [isOcrProcessing, setIsOcrProcessing] = useState(false);
   const [showOcrEditor, setShowOcrEditor] = useState(false);
+  
   // Använd samma session per dag 
   const [sessionId] = useState(() => {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     return `session_${today}`; // split('T')[0] tar bara datumdelen av ISO-strängen, så vi får en unik sessionId per dag. 
   });
+  
   const messagesEndRef = useRef<HTMLDivElement>(null); // Ref för att scrolla till botten av chatten när nya meddelanden läggs till
   const fileInputRef = useRef<HTMLInputElement>(null); // Ref för att kunna rensa filinputen när en bild tas bort
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); // När ett nytt meddelande läggs till, scrolla till botten av chatten 
   };
+
+  const [messages, setMessages] = useState<Message[]>([]);
 
   // funktion för att få userId och familyId från JWT
   const getAuthParams = (): { userId: string; familyId: string } | null => { // Denna funktion hämtar JWT-token från localStorage, dekodar den och returnerar userId och familyId som behövs för att autentisera API-anropen. Om token inte finns eller inte kan dekodas, returnerar den null, vilket indikerar att användaren inte är inloggad. 
@@ -463,6 +468,42 @@ export const ChatBot: React.FC = () => {
     }
   };
 
+  const { loadSessionId } = useLocation().state || {};
+
+useEffect(() => {
+  if (loadSessionId) {
+    const loadPreviousSession = async () => {
+      const authParams = getAuthParams();
+      if (!authParams) return;
+
+      try {
+        const response = await fetch(
+          `/api/chat/messages?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${loadSessionId}`,
+          { credentials: 'include' }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const loadedMessages: Message[] = data.items.map((item: any, index: number) => ({
+            id: `${index}`,
+            text: item.text,
+            sender: item.role === 'user' ? 'user' : 'ai',
+            timestamp: new Date(item.sk.split('#MSG#')[1])
+          }));
+
+          setMessages(loadedMessages);
+        } else {
+          console.log('Failed to fetch previous session messages');
+        }
+      } catch (error) {
+        console.error('Error loading previous session:', error);
+      }
+    };
+
+    loadPreviousSession();
+  }
+}, [loadSessionId]);
+
 
   return (
     <QuizControl
@@ -497,11 +538,7 @@ export const ChatBot: React.FC = () => {
                  {isLoading && <span className="loading-spinner">⟳</span>}
               </label>
             )}
-            {!isQuizMode && (
-            <button onClick={handleDeleteSession} id="delete-session-btn">
-              Radera session
-            </button>
-            )}
+            
 
           </div>
               

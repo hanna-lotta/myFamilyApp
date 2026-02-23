@@ -9,11 +9,11 @@ const MyProfile = () => {
 
   const handleLogout = () => {
     logout()
-    navigate('/login')
+    navigate('/')
   }
 
   if (!user) {
-    navigate('/login')
+    navigate('/')
     return null
   }
 
