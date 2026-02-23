@@ -75,3 +75,8 @@ export interface FamilyUserItem {
 	color: string; 
 	createdAt: string; // ISO timestamp
 }
+
+// Delete account response
+export interface DeleteAccountRes {
+	success: boolean;
+}
