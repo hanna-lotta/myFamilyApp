@@ -103,21 +103,6 @@
 	font-weight: 500;
 }
 
-/* .dropdown-menu {
-	position: absolute;
-	top: 100%;
-	right: 0;
-	background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
-	border: 1px solid var(--stroke);
-	border-radius: 16px;
-	box-shadow: var(--shadow2);
-	backdrop-filter: blur(14px);
-	-webkit-backdrop-filter: blur(14px);
-	margin-top: 0.5rem;
-	min-width: 150px;
-	z-index: 1000;
-	overflow: hidden;
-} */
 
 .desktop-dropdown {
 	display: none;
