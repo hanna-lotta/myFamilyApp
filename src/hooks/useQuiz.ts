@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getAuthHeader } from '../utils/auth';
 
 export interface QuizQuestion {
   question: string;
@@ -13,8 +14,8 @@ interface UseQuizParams {
   sessionId: string;
   setIsLoading: (v: boolean) => void;
   isLoading: boolean;
-  difficulty: 'easy' | 'medium' | 'hard'; 
-  
+  difficulty: 'easy' | 'medium' | 'hard';
+  lastUserMessage?: string; // Texten från sista user-meddelande
 }
 
 export const useQuiz = ({
@@ -23,14 +24,14 @@ export const useQuiz = ({
   sessionId,
   difficulty,
   setIsLoading,
-  isLoading, 
-  
+  isLoading,
+  lastUserMessage
 }: UseQuizParams) => {
   const [isQuizMode, setIsQuizMode] = useState(false);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
 
   const handleQuizButton = async () => {
-    if (!lastUploadedImage || isLoading) return;
+    if (!lastUserMessage || isLoading) return;
 
     const authParams = getAuthParams();
     if (!authParams) {
@@ -40,10 +41,16 @@ export const useQuiz = ({
 
     setIsLoading(true);
 
+    const authHeader = getAuthHeader();
     try {
       const formData = new FormData();
-      formData.append('message', 'Generera ett utbildningskviz baserat på denna läxa');
-      formData.append('image', lastUploadedImage);
+      const quizMessage = lastUserMessage.trim() || 'Generera ett utbildningskviz baserat på denna läxa';
+      formData.append('message', quizMessage);
+      // Skicka bara bilden om vi INTE har extraherad text (OCR)
+      // Om vi har OCR-text behöver vi inte bilden
+      if (lastUploadedImage && !lastUserMessage) {
+        formData.append('image', lastUploadedImage);
+      }
       formData.append('familyId', authParams.familyId);
       formData.append('userId', authParams.userId);
       formData.append('sessionId', sessionId);
@@ -53,7 +60,8 @@ export const useQuiz = ({
       const response = await fetch('/api/chat', {
         method: 'POST',
         body: formData,
-        credentials: 'include'
+        credentials: 'include',
+        headers: authHeader ? { Authorization: authHeader } : undefined
       });
 
       if (!response.ok) {
@@ -86,6 +94,8 @@ export const useQuiz = ({
 
     setIsLoading(true);
 
+    const authHeader = getAuthHeader();
+
     try {
       const formData = new FormData();
       formData.append('message', 'Generera ett utbildningskviz baserat på denna läxa');
@@ -99,7 +109,8 @@ export const useQuiz = ({
       const response = await fetch('/api/chat', {
         method: 'POST',
         body: formData,
-        credentials: 'include'
+        credentials: 'include',
+        headers: authHeader ? { Authorization: authHeader } : undefined // Om authHeader är null, sätt headers till undefined så att fetch inte inkluderar en tom Authorization-header. Detta gör att vi bara skickar Authorization-headern när vi faktiskt har en token, och undviker att skicka en ogiltig header som kan orsaka problem på servern.
       });
 
       if (!response.ok) {

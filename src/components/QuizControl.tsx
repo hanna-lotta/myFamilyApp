@@ -18,6 +18,7 @@ type QuizControlProps = {
   sessionId: string;
   setIsLoading: (v: boolean) => void;
   isLoading: boolean;
+  lastUserMessage?: string;
   children: (props: QuizControlRenderProps) => React.ReactNode;
 };
 
@@ -27,6 +28,7 @@ export const QuizControl: React.FC<QuizControlProps> = ({
   sessionId,
   setIsLoading,
   isLoading,
+  lastUserMessage,
   children
 }) => {
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
@@ -37,7 +39,8 @@ export const QuizControl: React.FC<QuizControlProps> = ({
     sessionId,
     difficulty,
     setIsLoading,
-    isLoading
+    isLoading,
+    lastUserMessage
   });
 
   return (

@@ -3,6 +3,7 @@ import '../App.css'
 import './Login.css'
 import { RegisterResponseSchema } from '../data/validation'
 import { useNavigate } from 'react-router'
+import { getAuthHeader } from '../utils/auth'
 import useUserStore from '../store/userStore'
 
 
@@ -10,7 +11,6 @@ interface FormData {
 	username: string
 	password: string
 	inviteCode?: string
-	role?: 'parent' | 'child'
 }
 
 const Login = () => {
@@ -19,14 +19,28 @@ const Login = () => {
 	
 	const [touched, setTouched] = useState<{username: boolean, password: boolean}>({username: false, password: false}) 
 	
-	const [showInviteModal, setShowInviteModal] = useState(false)
+	const [registerStep, setRegisterStep] = useState<'none' | 'accountCreated' | 'familySetup'>('none')
 	const [inviteCode, setInviteCode] = useState<string>('')
+	const [birthDate, setBirthDate] = useState('')
+	const [childInvites, setChildInvites] = useState<Array<{code: string, birthDate: string}>>([])
+	const [copiedCode, setCopiedCode] = useState<string | null>(null)
 	
 	const navigate = useNavigate();
 	
-	const setUser = useUserStore((s) => s.setUser)
+	const setUser = useUserStore((s) => s.setUser) //hämtar setUser-funktionen från userStore, som vi kommer använda för att spara användarens data i global state efter lyckad login eller registrering. Detta gör att vi kan visa användarnamn och färg i headern och andra delar av appen utan att behöva hämta det från servern varje gång.
 	
 	const LS_KEY = 'jwt' //nyckel för att spara token i localstorage
+
+	const generateInviteCode = () => {
+		const raw = crypto.randomUUID().split('-')[0] || '--------';
+		return raw.toUpperCase();
+	};
+
+	const copyToClipboard = (text: string) => {
+		navigator.clipboard.writeText(text);
+		setCopiedCode(text);
+		setTimeout(() => setCopiedCode(null), 2000);
+	};
 	
 	const ValidateForm = () => {
 		const newErrors: {username?: string; password?: string} = {}
@@ -42,13 +56,13 @@ const Login = () => {
 		} else if (formData.password.length < 6) {
 			newErrors.password = 'Lösenord måste vara minst 6 tecken'
 		}
-		setErrors(newErrors)
+		setErrors(newErrors) // Uppdatera errors state med de nya valideringsfelen. Detta kommer att trigga en omrendering av komponenten, och de fält som har fel kommer att visa sina respektive felmeddelanden under sig, samt få en röd border (genom className={errors.username && touched.username ? 'error' : ''} på input-fälten).
 		return Object.keys(newErrors).length === 0 //kollar om newErrors är ett tomt objekt = inga fel = formuläret är OK!
 	}
 
 	const handleSubmitLogin = async () => {
 		// Markera alla fält som touched vid submit
-        setTouched({username: true, password: true})
+        setTouched({username: true, password: true}) // När användaren försöker logga in, sätter vi alla fält som "touched" så att eventuella valideringsfel visas direkt. Detta är viktigt eftersom vi inte vill att användaren ska försöka logga in utan att se varför det inte fungerar (t.ex. om de glömde fylla i ett fält eller om lösenordet är för kort). Genom att markera alla fält som touched, kommer ValidateForm att visa alla relevanta felmeddelanden under respektive fält, vilket ger användaren tydlig feedback om vad som behöver åtgärdas innan de kan logga in.
 		
 		if (!ValidateForm()) {
 			return
@@ -62,7 +76,7 @@ const Login = () => {
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify(formData)
+				body: JSON.stringify(formData) // Skicka hela formData, inklusive inviteCode och role, även om de inte används i login-endpointen. Detta gör att vi kan använda samma formData både för login och register, och servern kommer helt enkelt ignorera de fält som inte behövs för login. 
 			})
 
 			if (!response.ok) {
@@ -111,12 +125,19 @@ const Login = () => {
 		setErrors({})
 		
 		try {
+// Förbered registrering - skicka inviteCode (backend auto-detekterar typ)
+		const registrationData = {
+			username: formData.username,
+			password: formData.password,
+			...(formData.inviteCode && { inviteCode: formData.inviteCode })
+			};
+
 			const response = await fetch('/api/register', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify(formData)
+				body: JSON.stringify(registrationData)
 			})
 
 			if (!response.ok) {
@@ -144,7 +165,7 @@ const Login = () => {
 				// Visa invite-kod modal om användaren skapade en ny familj
 				if (data.inviteCode) {
 					setInviteCode(data.inviteCode)
-					setShowInviteModal(true)
+					setRegisterStep('accountCreated')
 				} else {
 					// Om ingen invite-kod (gick med i befintlig familj), navigera direkt
 					navigate('/my-profile')
@@ -159,36 +180,150 @@ const Login = () => {
 	
 	return (
 		<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%' }}>
-		{showInviteModal && (
+		{registerStep !== 'none' && (
 			<div className="modal-overlay" onClick={() => {
-				setShowInviteModal(false)
+				setRegisterStep('none')
 				navigate('/my-profile')
 			}}>
 				<div className="modal-content" onClick={(e) => e.stopPropagation()}>
-					<h2>🎉 Familj skapad!</h2>
-					<p>Din familj har skapats. Dela denna kod med dina familjemedlemmar så de kan gå med:</p>
-					<div className="invite-code-display">
-						<code>{inviteCode}</code>
-					</div>
-					<p className="invite-hint">De anger denna kod när de registrerar sig.</p>
-					<button 
-						className="loginbutton" 
-						onClick={() => {
-							navigator.clipboard.writeText(inviteCode)
-							alert('Invite-kod kopierad!')
-						}}
-					>
-						Kopiera kod
-					</button>
-					<button 
-						className="registerbutton" 
-						onClick={() => {
-							setShowInviteModal(false)
-							navigate('/my-profile')
-						}}
-					>
-						Fortsätt
-					</button>
+					{registerStep === 'accountCreated' && (
+						<>
+							<h2>🎉 Ditt konto är skapat!</h2>
+							<div className="modal-actions">
+								<button 
+									className="loginbutton" 
+									onClick={() => {
+										setRegisterStep('none')
+										navigate('/my-profile')
+									}}
+								>
+									Fortsätt till appen
+								</button>
+								<button 
+									className="registerbutton" 
+									onClick={() => {
+										setRegisterStep('familySetup')
+									}}
+								>
+									Skapa familj och bjud in barn
+								</button>
+							</div>
+						</>
+					)}
+
+					{registerStep === 'familySetup' && (
+						<>
+							<h2>Skapa familj och lägg till barn</h2>
+							<div className="modal-section">
+								<p className="invite-label">Parent-invite</p>
+								<div className="code-box">
+									<code>{inviteCode || '--------'}</code>
+									<button 
+										className="copy-btn"
+										onClick={() => copyToClipboard(inviteCode || '')}
+										title="Kopiera"
+									>
+										{copiedCode === inviteCode ? '✓' : 'Kopiera'}
+									</button>
+								</div>
+								<p className="invite-hint">Använd denna för andra föräldrar om du vill.</p>
+							</div>
+							<div className="divider" />
+							<div className="modal-section">
+								<h3>Lägg till barn</h3>
+								<label className="modal-label">
+									Barnets födelsedatum:
+									<input
+										type="date"
+										value={birthDate}
+										onChange={(event) => setBirthDate(event.target.value)}
+										className="modal-input"
+									/>
+								</label>
+								<button
+									className="loginbutton"
+									disabled={!birthDate}
+									onClick={async () => {
+										if (!birthDate) return;
+										
+										const token = localStorage.getItem('jwt');
+										const authHeader = getAuthHeader();
+										if (!authHeader) {
+											console.error('No token found');
+											return;
+										}
+
+										try {
+											const response = await fetch('/api/family/child-invite', {
+												method: 'POST',
+												headers: {
+													'Content-Type': 'application/json',
+													Authorization: authHeader
+												},
+												body: JSON.stringify({
+													birthDate: birthDate
+												})
+											});
+
+											if (!response.ok) {
+												console.error('Failed to create child invite');
+												alert('Kunde inte skapa barn-invite');
+												return;
+											}
+
+											const data = await response.json();
+											if (data.childInviteCode) {
+												setChildInvites([...childInvites, { code: data.childInviteCode, birthDate: birthDate }]);
+												setBirthDate('');
+											}
+										} catch (error) {
+											console.error('Error creating child invite:', error);
+											alert('Fel vid skapande av barn-invite');
+										}
+									}}
+								>
+									Skapa invite-kod
+								</button>
+								{childInvites.length > 0 && (
+									<div className="child-invites-list">
+										<h4>Skapade barn-invites:</h4>
+										{childInvites.map((invite, index) => (
+											<div key={index} className="invite-item">
+												<div className="code-box">
+													<code>{invite.code}</code>
+													<button 
+														className="copy-btn"
+														onClick={() => copyToClipboard(invite.code)}
+														title="Kopiera"
+													>
+														{copiedCode === invite.code ? '✓' : 'Kopiera'}
+													</button>
+												</div>
+												<small>Födelsedata: {new Date(invite.birthDate).toLocaleDateString('sv-SE')}</small>
+												<button
+													className="remove-btn"
+													onClick={() => setChildInvites(childInvites.filter((_, i) => i !== index))}
+												>
+													Ta bort
+												</button>
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+							<div className="modal-actions">
+								<button
+									className="registerbutton"
+									onClick={() => {
+										setRegisterStep('none')
+										navigate('/my-profile')
+									}}
+								>
+									Fortsätt till appen
+								</button>
+							</div>
+						</>
+					)}
 				</div>
 			</div>
 		)}
@@ -245,7 +380,7 @@ const Login = () => {
 		Invite-kod (valfritt):
 		<input type="text" 
 		name="inviteCode" 
-		placeholder="Ange om du vill gå med i befintlig familj"
+		placeholder="Ange kod om du vill gå med i en familj"
 		value={formData.inviteCode || ''}
 		onChange={event => {
 			setFormData({...formData, inviteCode: event.target.value})
@@ -253,35 +388,6 @@ const Login = () => {
 		/>
 		<span className="error-text hidden"></span>
 		</label>
-		
-		{formData.inviteCode && formData.inviteCode.trim() && (
-			<label>
-			Jag är:
-			<div className="role-selector">
-				<label className="role-option">
-					<input 
-						type="radio" 
-						name="role" 
-						value="parent"
-						checked={formData.role === 'parent'}
-						onChange={() => setFormData({...formData, role: 'parent'})}
-					/>
-					<span>Förälder</span>
-				</label>
-				<label className="role-option">
-					<input 
-						type="radio" 
-						name="role" 
-						value="child"
-						checked={formData.role === 'child'}
-						onChange={() => setFormData({...formData, role: 'child'})}
-					/>
-					<span>Barn</span>
-				</label>
-			</div>
-			<span className="error-text hidden"></span>
-			</label>
-		)}
 		</div>
 		<button className='loginbutton' type="submit">Logga in</button>
 		<button className='registerbutton' type="button" onClick={handleSubmitRegister}>Registrera</button>

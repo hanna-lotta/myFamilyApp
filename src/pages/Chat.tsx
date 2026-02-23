@@ -230,6 +230,7 @@ export const Chat: React.FC = () => {
           )}
         </div>
         <div className="chat-header">
+        <div className="chatbot-header">
           <h1>🤖 Lexi – din smarta läxkompis</h1>
           <p>Få hjälp med dina läxor - ställ frågor om matte, svenska, engelska och mer!</p>
 		  <br />
@@ -239,6 +240,7 @@ export const Chat: React.FC = () => {
           <ChatBot />
         </div>
       </div>
+    </div>
     </div>
   );
 };
