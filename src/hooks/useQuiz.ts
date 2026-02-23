@@ -65,7 +65,9 @@ export const useQuiz = ({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get response');
+        const errorText = await response.text();
+        const details = errorText || response.statusText || 'Empty response body';
+        throw new Error(`Failed to get response (${response.status}): ${details}`);
       }
 
       const data = await response.json();
@@ -114,7 +116,9 @@ export const useQuiz = ({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get response');
+        const errorText = await response.text();
+        const details = errorText || response.statusText || 'Empty response body';
+        throw new Error(`Failed to get response (${response.status}): ${details}`);
       }
 
       const data = await response.json();

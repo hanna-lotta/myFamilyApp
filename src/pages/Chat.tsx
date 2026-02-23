@@ -6,6 +6,7 @@ import { faXmark, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router';
 import useClickOutside from '../hooks/useClickOutside';
 import type { Session, Message, JwtPayload } from '../types/types'; 
+import { getAuthHeader } from '../utils/auth';
 
 
 
@@ -67,11 +68,10 @@ export const Chat: React.FC = () => {
       try {
         const url = `/api/chat/sessions?familyId=${authParams.familyId}&userId=${authParams.userId}`;
         console.log('Fetching sessions from:', url);
+        const authHeader = getAuthHeader();
         
         const response = await fetch(url, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-          }
+          headers: authHeader ? { Authorization: authHeader } : undefined
         });
         
         console.log('Response status:', response.status);
@@ -137,13 +137,15 @@ export const Chat: React.FC = () => {
   
       const authParams = getAuthParams();
       if (!authParams) return;
+      const authHeader = getAuthHeader();
   
       try {
         const response = await fetch(
           `/api/chat/session?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${sessionIdToDelete}`,
           {
             method: 'DELETE',
-            credentials: 'include'
+            credentials: 'include',
+            headers: authHeader ? { Authorization: authHeader } : undefined
           }
         );
   

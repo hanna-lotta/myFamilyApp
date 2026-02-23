@@ -69,6 +69,29 @@ const calculateAge = (birthDate: string): number => {
   return age;
 };
 
+const parseQuizArray = (raw: string): unknown[] | null => {
+  const normalized = raw.replace(/```json|```/gi, '').trim();
+  const candidates: string[] = [normalized];
+  const arrayMatch = normalized.match(/\[[\s\S]*\]/);
+
+  if (arrayMatch) {
+    candidates.unshift(arrayMatch[0]);
+  }
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+};
+
 // Initiera OpenAI
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -214,14 +237,42 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
       });
       // Försök parsa JSON även om modellen råkar lägga till text
       const quizResponse = quizCompletion.choices[0]?.message?.content || "[]";
-      const jsonMatch = quizResponse.match(/\[[\s\S]*\]/);
-      const quizData = JSON.parse(jsonMatch ? jsonMatch[0] : quizResponse);
+      let quizData = parseQuizArray(quizResponse);
+
+      if (!quizData) {
+        const repairMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+          {
+            role: "system",
+            content: "Konvertera texten till ENDAST en giltig JSON-array med objekt som har fälten question, options, correctAnswer, explanation. Returnera endast JSON."
+          },
+          {
+            role: "user",
+            content: quizResponse
+          }
+        ];
+
+        const repairCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: repairMessages,
+          max_tokens: 2000,
+          temperature: 0
+        });
+
+        const repairedResponse = repairCompletion.choices[0]?.message?.content || "[]";
+        quizData = parseQuizArray(repairedResponse);
+      }
+
+      if (!quizData) {
+        console.error('Quiz parse error: model did not return JSON array', quizResponse.slice(0, 300));
+        return res.status(502).json({ error: 'Quiz-svaret var inte giltig JSON. Försök igen.' });
+      }
 
       //returnera quiz till frontend
       return res.json({ quiz: quizData, timestamp });
     } catch (error) {
       console.error('Quiz error:', error);
-      return res.status(500).json({ error: 'Kunde inte generera quiz' });
+      const details = error instanceof Error ? error.message : 'Okänt fel';
+      return res.status(500).json({ error: `Kunde inte generera quiz: ${details}` });
     }
   }
 
