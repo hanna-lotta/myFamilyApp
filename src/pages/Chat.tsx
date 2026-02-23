@@ -215,13 +215,14 @@ export const Chat: React.FC = () => {
                        
 
                        <button
+                        type="button"
                         className="session-delete-btn"
                         onClick={(e) => {
                           e.stopPropagation(); // Förhindra att handleSessionSelect triggas
                           handleDeleteSession(session.sessionId);
                         }}
-                        aria-label="Ta bort session"
                       >
+                        <span>Ta bort</span>{' '}
                         <FontAwesomeIcon icon={faTrash} />
                       </button>
                     </div>
