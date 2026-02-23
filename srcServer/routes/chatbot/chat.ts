@@ -444,11 +444,13 @@ type MessagesQuery = z.infer<typeof messagesQuerySchema> & {
 // GET endpoint, hämta alla meddelanden i en specifik session
 router.get('/messages', async (req: Request<{}, {}, {}, MessagesQuery>, res: Response<MessagesResponse | ErrorMessage>) => {
   try {
+    //requireAuth läser Authorization‑headern och validerar JWT
     const payload = requireAuth(req, res); // Validera JWT-token och hämta payload (userId, familyId, role)
     if (!payload) {
       return;
     }
 
+    //messagesQuerySchema kontrollerar att familyId, userId, sessionId finns och är giltiga.
     const parsedQuery = messagesQuerySchema.safeParse(req.query);
     if (!parsedQuery.success) {
       return res.status(400).json({
@@ -459,13 +461,15 @@ router.get('/messages', async (req: Request<{}, {}, {}, MessagesQuery>, res: Res
 
     const { familyId, userId, sessionId } = parsedQuery.data;
 
+//requireSameUser säkerställer att userId och familyId i query matchar token.
     if (!requireSameUser(payload, userId, familyId, res)) {
       return;
     }
 
-    // pk: family#001
-    // sk börjar med: user#456#SESSION#sess01#MSG#
+    //Bygger DynamoDB‑nycklar där pk: family#001 och sk börjar med: user#456#SESSION#sess01#MSG#
     const pk = `family#${familyId}`;
+
+    //Hämtar alla items där pk matchar och sk börjar med skPrefix.
     const skPrefix = `user#${userId}#SESSION#${sessionId}#MSG#`;
 
     console.log('Query with pk:', pk, 'sk:', skPrefix);
@@ -483,7 +487,7 @@ router.get('/messages', async (req: Request<{}, {}, {}, MessagesQuery>, res: Res
       }
     }));
 
-    //res.json({ items: result.Items || [] });
+    //Returnerar items (validerade via MessagesResponseSchema) som JSON.
 	res.json(MessagesResponseSchema.parse({
   	items: result.Items || []
 }));
@@ -720,16 +724,18 @@ try {
 //Get endpoint-hämta tidigare sessioner med första orden av första meddelandet
 router.get('/sessions', async (req, res) => {
   try {
+
+    //hämtar familyId och userId från req eury
     const { familyId, userId } = req.query;
 
     if (!familyId || !userId) {
       return res.status(400).json({ error: 'familyId och userId krävs' });
     }
-
+    //bygger nycklar
     const pk = `family#${familyId}`;
     const skPrefix = `user#${userId}#SESSION#`;
 
-    // Hämta alla sessioner
+    // Hämtar alla items där pk matchar och sk börjar med skPrefix.
     const result = await db.send(new QueryCommand({
       TableName: tableName,
       KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :sk)",
@@ -747,7 +753,7 @@ router.get('/sessions', async (req, res) => {
     
     console.log('Raw items from DB:', result.Items?.length);
     
-    // Extrahera sessioner och första användarmeddelandet för varje
+    // Går igenom alla items och plockar ut:sessionId från sk via regex, timestamp från sk och message(text)
     result.Items?.forEach((item: any) => {
       console.log('Processing item:', { sk: item.sk, role: item.role, text: item.text });
       const match = item.sk.match(/#SESSION#([^#]+)#MSG#(\d+)/);
@@ -758,7 +764,7 @@ router.get('/sessions', async (req, res) => {
         
         console.log('Found user message:', { sessionId, timestamp, messageText });
         
-        // Spara bara första (lägsta timestamp) meddelandet per session
+        // Väljer första user meddelandet per session
         if (!sessionMap.has(sessionId) || timestamp < sessionMap.get(sessionId)!.timestamp) {
           sessionMap.set(sessionId, {
             message: messageText,
@@ -777,6 +783,8 @@ router.get('/sessions', async (req, res) => {
         .slice(0, 5)        // Ta första 5 element
         .join(' ')          // Slå ihop med mellanslag
             }))
+
+            //Sorterar sessions med localeCompare och skickar som JSON.
       .sort((a, b) => a.sessionId.localeCompare(b.sessionId));
 
     console.log('Returning sessions:', sessions);
