@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChatBot } from '../components/chatBot';
 import './Chat.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faClockRotateLeft, faXmark, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router';
 import useClickOutside from '../hooks/useClickOutside';
 import type { Session, Message, JwtPayload } from '../types/types'; 
@@ -113,7 +113,7 @@ export const Chat: React.FC = () => {
       setIsSessionsOpen(false);
       setIsSessionsClosing(false);
       setIsSessionsVisible(false);
-    }, 300);
+    }, 610);
   };
   
   useClickOutside(dropdownRef, () => {
@@ -175,7 +175,7 @@ export const Chat: React.FC = () => {
               }
             }}
           >
-            <FontAwesomeIcon icon={faClockRotateLeft} />
+            Tidigare konversationer
           </button>
           
           {isSessionsVisible && (
