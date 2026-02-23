@@ -31,7 +31,8 @@ export const useQuiz = ({
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
 
   const handleQuizButton = async () => {
-    if (!lastUserMessage || isLoading) return;
+    const hasText = !!lastUserMessage?.trim();
+    if ((!hasText && !lastUploadedImage) || isLoading) return;
 
     const authParams = getAuthParams();
     if (!authParams) {
@@ -44,11 +45,13 @@ export const useQuiz = ({
     const authHeader = getAuthHeader();
     try {
       const formData = new FormData();
-      const quizMessage = lastUserMessage.trim() || 'Generera ett utbildningskviz baserat på denna läxa';
+      const quizMessage = hasText
+        ? lastUserMessage!.trim()
+        : 'Generera ett utbildningskviz baserat på denna läxa';
       formData.append('message', quizMessage);
       // Skicka bara bilden om vi INTE har extraherad text (OCR)
       // Om vi har OCR-text behöver vi inte bilden
-      if (lastUploadedImage && !lastUserMessage) {
+      if (lastUploadedImage && !hasText) {
         formData.append('image', lastUploadedImage);
       }
       formData.append('familyId', authParams.familyId);
@@ -84,7 +87,8 @@ export const useQuiz = ({
   };
 
   const generateQuiz = async (difficultyLevel: 'easy' | 'medium' | 'hard' = difficulty) => {
-    if (!lastUploadedImage) {
+    const hasText = !!lastUserMessage?.trim();
+    if (!hasText && !lastUploadedImage) {
       return;
     }
 
@@ -100,8 +104,13 @@ export const useQuiz = ({
 
     try {
       const formData = new FormData();
-      formData.append('message', 'Generera ett utbildningskviz baserat på denna läxa');
-      formData.append('image', lastUploadedImage);
+      const quizMessage = hasText
+        ? lastUserMessage!.trim()
+        : 'Generera ett utbildningskviz baserat på denna läxa';
+      formData.append('message', quizMessage);
+      if (lastUploadedImage && !hasText) {
+        formData.append('image', lastUploadedImage);
+      }
       formData.append('familyId', authParams.familyId);
       formData.append('userId', authParams.userId);
       formData.append('sessionId', sessionId);

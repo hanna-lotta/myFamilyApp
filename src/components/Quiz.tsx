@@ -11,9 +11,10 @@ interface QuizProps {
   questions: QuizQuestion[]; // quiz‑frågorna från backend
   onAnswerSubmit: (answer: string) => void; // callback när användaren svarar
   onQuizEnd: () => void;
+  onQuizComplete: (quizScore: number, questionCount: number) => void;
 }
 
-export const Quiz: React.FC<QuizProps> = ({ questions, onAnswerSubmit, onQuizEnd }) => {
+export const Quiz: React.FC<QuizProps> = ({ questions, onAnswerSubmit, onQuizEnd, onQuizComplete }) => {
   const [currentIndex, setCurrentIndex] = useState(0); //vilken fråga som visas
   const [answers, setAnswers] = useState<string[]>([]); //anv. svar
   const [showResults, setShowResults] = useState(false); //visa resultat ist för frågor
@@ -38,6 +39,15 @@ export const Quiz: React.FC<QuizProps> = ({ questions, onAnswerSubmit, onQuizEnd
     onAnswerSubmit(answer);
 
     if (isLast) {
+      // Räkna korrekta svar innan vi förlorar state
+      const finalCorrectCount = newAnswers.reduce((acc, ans, idx) => {
+        return acc + (ans === questions[idx].correctAnswer ? 1 : 0);
+      }, 0);
+      const finalPercent = Math.round((finalCorrectCount / questions.length) * 100);
+      
+      // Spara resultatet till databasen
+      onQuizComplete(finalPercent, questions.length);
+      
       setShowResults(true);
     } else {
       setCurrentIndex(currentIndex + 1);
@@ -99,7 +109,7 @@ export const Quiz: React.FC<QuizProps> = ({ questions, onAnswerSubmit, onQuizEnd
             className="quiz-option-btn"
             onClick={() => handleAnswer(opt)}
           >
-            {String.fromCharCode(65 + i)}) {opt}
+            {opt}
           </button>
         ))}
       </div>

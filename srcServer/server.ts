@@ -6,6 +6,7 @@ import loginRouter from './routes/login.js';
 import registerRouter from './routes/register.js';
 import chatRouter from './routes/chatbot/chat.js';
 import familyRouter from './routes/family.js';
+import parentRouter from './routes/parent.js';
 
 const port: number = Number(process.env.PORT) || 1338
 const app: Express = express()
@@ -24,6 +25,7 @@ app.use('/api/login', loginRouter);
 app.use('/api/register', registerRouter);
 app.use('/api/family', familyRouter);
 app.use('/api/chat', chatRouter);
+app.use('/api/parent', parentRouter);
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`)

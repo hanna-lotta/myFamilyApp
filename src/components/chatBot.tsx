@@ -510,6 +510,32 @@ useEffect(() => {
   }
 }, [loadSessionId]);
 
+  const handleQuizComplete = async (quizScore: number, questionCount: number) => {
+    const authParams = getAuthParams();
+    const authHeader = getAuthHeader();
+    if (!authParams || !authHeader) {
+      return;
+    }
+
+    try {
+      await fetch('/api/chat/stats', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: authHeader
+        },
+        body: JSON.stringify({
+          familyId: authParams.familyId,
+          userId: authParams.userId,
+          sessionId,
+          quizScore
+        })
+      });
+    } catch (error) {
+      console.error('Kunde inte spara quizresultat:', error);
+    }
+  };
 
   return (
     <QuizControl
@@ -518,7 +544,7 @@ useEffect(() => {
       sessionId={sessionId}
       setIsLoading={setIsLoading}
       isLoading={isLoading}
-      lastUserMessage={messages.reverse().find(m => m.sender === 'user')?.text || ''}
+      lastUserMessage={[...messages].reverse().find(m => m.sender === 'user')?.text || ''}
     >
       {({ isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton, difficulty, setDifficulty, generateQuiz }) => (
         <div className="chatbot-container">
@@ -554,6 +580,7 @@ useEffect(() => {
               key={`${difficulty}-${quizQuestions.length}`}
               questions={quizQuestions}
               onAnswerSubmit={(answer) => console.log('Svar:', answer)}
+              onQuizComplete={handleQuizComplete}
               onQuizEnd={() => setIsQuizMode(false)}
             />
           ) : (
