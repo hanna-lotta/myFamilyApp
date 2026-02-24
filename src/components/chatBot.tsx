@@ -10,6 +10,8 @@ import Tesseract from 'tesseract.js';
 
 import { getAuthHeader, decodeJwt } from '../utils/auth';
 import { useLocation } from 'react-router';
+import sendIcon from '../assets/sendIcon.png';
+
 
 interface Message {
   id: string;
@@ -694,24 +696,26 @@ useEffect(() => {
                   <FontAwesomeIcon icon={faCamera} />
                 </button>
 
-                <SpeechToTextButton onResult={(text) => setInputText(text)} />
+                <div className="input-field-wrapper">
+                  <textarea
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Skriv din fråga här, klistra in en bild, eller ladda upp från kamera/galleri..."
+                    className="chat-input"
+                    rows={2}
+                    disabled={isLoading}
+                    
+                  />
+                  <SpeechToTextButton onResult={(text) => setInputText(text)} />
+                </div>
               
-                <textarea
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Skriv din fråga här, klistra in en bild, eller ladda upp från kamera/galleri..."
-                  className="chat-input"
-                  rows={2}
-                  disabled={isLoading}
-                  
-                />
                 <button
                   onClick={handleSendMessage}
                   disabled={(!inputText.trim() && !selectedImage) || isLoading}
                   className="send-button"
                 >
-                  <FontAwesomeIcon icon={faPaperPlane} />
+                   <img src={sendIcon} alt="Skicka" className="send-icon" />
                 </button>
               </div>
             </div>
