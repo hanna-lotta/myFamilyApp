@@ -54,17 +54,20 @@
 
 #delete-message-btn {
     background: none;
-    padding:0;
+    padding: 2px;
     border: none;
     color: var(--muted);
     flex-shrink: 0;
+    font-size: 16px;
+    cursor: pointer;
  }
 #speak-button {
     background: none;
-    padding:0;
+    padding: 2px;
     border: none;
     font-size: 16px;
     flex-shrink: 0;
+    cursor: pointer;
 }
 
 .user-message .message-content {
@@ -91,12 +94,12 @@
 }
 
 .message-time {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   color: var(--muted);
   opacity: 0.8;
   display: inline-block;
-  margin-top: 4px;
   flex-shrink: 0;
+  padding: 2px;
 }
 
 .typing-indicator {
@@ -385,6 +388,7 @@
   background: none !important;
   border: none !important;
   font-size: 24px !important;
+  
 }
 
 .chat-input {
