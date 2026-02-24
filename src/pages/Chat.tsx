@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChatBot } from '../components/chatBot';
 import './Chat.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faTrash,faRectangleList} from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faTrash} from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router';
 import useClickOutside from '../hooks/useClickOutside';
 import type { Session, Message, JwtPayload } from '../types/types'; 
@@ -177,7 +177,7 @@ export const Chat: React.FC = () => {
               }
             }}
           >
-            Historik <FontAwesomeIcon icon={faRectangleList} />
+            Historik 
           </button>
           
           {isSessionsVisible && (

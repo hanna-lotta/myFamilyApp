@@ -5,12 +5,11 @@ import { SpeakButton } from './SpeakButton';
 import { SpeechToTextButton } from './SpeechToTextButton';
 import { QuizControl } from './QuizControl';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCamera, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { faCamera, faPaperPlane, faTrashCan } from '@fortawesome/free-solid-svg-icons';
 import Tesseract from 'tesseract.js';
 
 import { getAuthHeader, decodeJwt } from '../utils/auth';
 import { useLocation } from 'react-router';
-import sendIcon from '../assets/sendIcon.png';
 
 
 interface Message {
@@ -600,7 +599,7 @@ useEffect(() => {
                           id="delete-message-btn"
                           title="Ta bort detta meddelande"
                         >
-                          🗑️
+                          <FontAwesomeIcon icon={faTrashCan} />
                         </button>
                         
                       )}
@@ -715,7 +714,7 @@ useEffect(() => {
                   disabled={(!inputText.trim() && !selectedImage) || isLoading}
                   className="send-button"
                 >
-                   <img src={sendIcon} alt="Skicka" className="send-icon" />
+                   <FontAwesomeIcon icon={faPaperPlane} />
                 </button>
               </div>
             </div>
