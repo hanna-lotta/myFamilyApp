@@ -553,7 +553,7 @@ useEffect(() => {
             <h2>Chat - {new Date().toLocaleDateString('sv-SE')}</h2>
             {isQuizMode && (
               <label className="quiz-difficulty">
-                Quiz-nivå
+                nivå
                 <select
                   value={difficulty}
                   onChange={(e) => {
