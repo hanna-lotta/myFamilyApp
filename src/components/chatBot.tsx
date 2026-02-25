@@ -85,12 +85,18 @@ export const ChatBot: React.FC = () => {
 
         if (response.ok) {
           const data = await response.json();
-          const loadedMessages: Message[] = data.items.map((item: any, index: number) => ({
-            id: `${index}`,
-            text: item.text,
-            sender: item.role === 'user' ? 'user' : 'ai',
-            timestamp: new Date(item.sk.split('#MSG#')[1]) // Vi antar att sk i DynamoDB är i formatet "MSG#<timestamp>", så vi splittrar på '#MSG#' och tar den andra delen (index 1) för att få timestampen, som vi sedan konverterar till ett Date-objekt. Detta gör att vi kan sortera och visa meddelandena i kronologisk ordning baserat på när de skickades. Vi använder sk för att lagra timestamp eftersom det gör det enkelt att sortera meddelanden i DynamoDB, och genom att extrahera timestampen från sk kan vi visa den i vår frontend utan att behöva lagra den som ett separat fält i databasen. 
-          }));
+          const loadedMessages: Message[] = data.items.map((item: any, index: number) => {
+            const sk: string | undefined = typeof item.sk === 'string' ? item.sk : undefined;
+            const skTimestamp = sk && sk.includes('#MSG#') ? sk.split('#MSG#')[1] : undefined;
+            const fallbackTimestamp = item.timestamp || item.createdAt || new Date().toISOString();
+
+            return {
+              id: `${index}`,
+              text: item.text,
+              sender: item.role === 'user' ? 'user' : 'ai',
+              timestamp: new Date(skTimestamp || fallbackTimestamp)
+            };
+          });
 
           // Lägg alltid till välkomstmeddelandet först
           const welcomeMessage: Message = {
@@ -505,6 +511,32 @@ useEffect(() => {
   }
 }, [loadSessionId]);
 
+  const handleQuizComplete = async (quizScore: number, questionCount: number) => {
+    const authParams = getAuthParams();
+    const authHeader = getAuthHeader();
+    if (!authParams || !authHeader) {
+      return;
+    }
+
+    try {
+      await fetch('/api/chat/stats', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: authHeader
+        },
+        body: JSON.stringify({
+          familyId: authParams.familyId,
+          userId: authParams.userId,
+          sessionId,
+          quizScore
+        })
+      });
+    } catch (error) {
+      console.error('Kunde inte spara quizresultat:', error);
+    }
+  };
 
   return (
     <QuizControl
@@ -513,7 +545,7 @@ useEffect(() => {
       sessionId={sessionId}
       setIsLoading={setIsLoading}
       isLoading={isLoading}
-      lastUserMessage={messages.reverse().find(m => m.sender === 'user')?.text || ''}
+      lastUserMessage={[...messages].reverse().find(m => m.sender === 'user')?.text || ''}
     >
       {({ isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton, difficulty, setDifficulty, generateQuiz }) => (
         <div className="chatbot-container">
@@ -549,6 +581,7 @@ useEffect(() => {
               key={`${difficulty}-${quizQuestions.length}`}
               questions={quizQuestions}
               onAnswerSubmit={(answer) => console.log('Svar:', answer)}
+              onQuizComplete={handleQuizComplete}
               onQuizEnd={() => setIsQuizMode(false)}
             />
           ) : (

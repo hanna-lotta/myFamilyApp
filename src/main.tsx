@@ -7,6 +7,7 @@ import MyProfile from './pages/MyProfile.tsx'
 import ProtectedRoute from './components/ProtectedRoute.tsx'
 import { Chat } from './pages/chat.tsx'
 import FamilyInviteManager from './components/FamilyInviteManager.tsx'
+import ParentView from './components/ParentView.tsx'
 
 const router = createHashRouter([
 	{
@@ -28,6 +29,10 @@ const router = createHashRouter([
 			{
 				path: '/family',
 				element: <ProtectedRoute><FamilyInviteManager /></ProtectedRoute>
+			},
+			{
+				path: '/parent',
+				element: <ProtectedRoute><ParentView /></ProtectedRoute>
 			}
 		]
 	}

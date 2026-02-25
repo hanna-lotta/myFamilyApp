@@ -120,12 +120,20 @@ const Header = () => {
               {showDropdown && (
                 <div className="dropdown-menu">
                   {isParent && (
-                    <button onClick={() => {
-                      navigate('/family');
-                      setShowDropdown(false);
-                    }}>
-                      Bjud in familj
-                    </button>
+									<>
+										<button onClick={() => {
+											navigate('/parent');
+											setShowDropdown(false);
+										}}>
+											Föräldraöversikt
+										</button>
+	                    <button onClick={() => {
+	                      navigate('/family');
+	                      setShowDropdown(false);
+	                    }}>
+	                      Bjud in familj
+	                    </button>
+									</>
                   )}
                   <button onClick={() => setShowColorPicker(!showColorPicker)}>
                     {showColorPicker ? 'Stäng färgval' : 'Byt färg'}

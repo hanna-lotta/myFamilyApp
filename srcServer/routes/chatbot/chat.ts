@@ -2,7 +2,7 @@ import express from 'express';
 import type { Request, Response } from 'express';
 import OpenAI from 'openai';
 import multer from 'multer';
-import { QueryCommand, BatchWriteCommand, PutCommand, GetCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, BatchWriteCommand, PutCommand, GetCommand, DeleteCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { z } from 'zod';
 import { db, tableName } from '../../data/dynamoDb.js'
 import { tools, executeTool } from './tools.js';
@@ -116,10 +116,20 @@ export const chatRequestSchema = z.object({
   userId: z.string().trim().min(1),
   sessionId: z.string().trim().min(1),
   mode: z.enum(['quiz', 'chat']).optional(),
-  difficulty: z.enum(['easy', 'medium', 'hard']).optional()
+  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+  subject: z.string().trim().min(1).optional()
+});
+
+export const statsRequestSchema = z.object({
+  familyId: z.string().trim().min(1),
+  userId: z.string().trim().min(1),
+  sessionId: z.string().trim().min(1),
+  quizScore: z.number().min(0).max(100),
+  subject: z.string().trim().min(1).optional()
 });
 
 type ChatRequestBody = z.infer<typeof chatRequestSchema>;
+type StatsRequestBody = z.infer<typeof statsRequestSchema>;
 
 interface QuizResponseBody {
   quiz: unknown[];
@@ -136,6 +146,90 @@ interface DeleteCountResponseBody {
 }
 
 type ChatPostResponseBody = QuizResponseBody | ChatResponseBody;
+
+router.post('/stats', async (req: Request<{}, { ok: boolean } | ErrorMessage, StatsRequestBody>, res: Response<{ ok: boolean } | ErrorMessage>) => {
+  try {
+    const payload = requireAuth(req, res);
+    if (!payload) {
+      return;
+    }
+
+    const parsedBody = statsRequestSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        issues: parsedBody.error.issues
+      });
+    }
+
+    const { familyId, userId, sessionId, quizScore, subject } = parsedBody.data;
+
+    if (!requireSameUser(payload, userId, familyId, res)) {
+      return;
+    }
+
+    const pk = `family#${familyId}`;
+    const sessionSk = `user#${userId}#SESSION#${sessionId}`;
+    const statsSk = `${sessionSk}#STATS`;
+    const nowIso = new Date().toISOString();
+
+    // Fetch existing SESSION item to preserve startedAt
+    const sessionResult = await db.send(new GetCommand({
+      TableName: tableName,
+      Key: { pk, sk: sessionSk }
+    }));
+
+    const startedAt = typeof sessionResult.Item?.startedAt === 'string' 
+      ? sessionResult.Item.startedAt 
+      : nowIso;
+    const existingSubject = typeof sessionResult.Item?.subject === 'string' 
+      ? sessionResult.Item.subject 
+      : subject || 'Okänt';
+
+    // Upsert SESSION with subject if provided
+    await db.send(new PutCommand({
+      TableName: tableName,
+      Item: {
+        pk,
+        sk: sessionSk,
+        startedAt,
+        subject: existingSubject
+      }
+    }));
+
+    // Fetch existing STATS to merge with current values
+    const statsResult = await db.send(new GetCommand({
+      TableName: tableName,
+      Key: { pk, sk: statsSk }
+    }));
+
+    // Build STATS item: preserve questionCount & durationMinutes, add/update quizScore
+    const statsItem: Record<string, unknown> = {
+      pk,
+      sk: statsSk
+    };
+
+    if (typeof statsResult.Item?.durationMinutes === 'number') {
+      statsItem.durationMinutes = statsResult.Item.durationMinutes;
+    }
+    if (typeof statsResult.Item?.questionCount === 'number') {
+      statsItem.questionCount = statsResult.Item.questionCount;
+    }
+    
+    statsItem.quizScore = quizScore;  // Always update with new quizScore
+
+    await db.send(new PutCommand({
+      TableName: tableName,
+      Item: statsItem
+    }));
+
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error('Save stats error:', error);
+    return res.status(500).json({ error: 'Kunde inte spara statistik' });
+  }
+});
+
 // POST endpoint, skicka meddelande + bild, få AI-svar
 router.post('/', upload.single('image'), async (req: Request<{}, ChatPostResponseBody | ErrorMessage, ChatRequestBody>, res: Response<ChatPostResponseBody | ErrorMessage>) => {
   try { // req/res är redan typade via router.post‑signaturen.
@@ -152,7 +246,7 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
       });
     }
 
-    const { message, familyId, userId, sessionId, mode, difficulty } = parsedBody.data;
+    const { message, familyId, userId, sessionId, mode, difficulty, subject } = parsedBody.data;
     const imageFile = req.file;
 
     if (!requireSameUser(payload, userId, familyId, res)) {
@@ -161,6 +255,7 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
 
     const timestamp = new Date().toISOString();
     const pk = `family#${familyId}`;
+    const sessionSk = `user#${userId}#SESSION#${sessionId}`;
 
     // Hämta user-itemet för att få birthDate
     let userAge: number | null = null;
@@ -212,17 +307,18 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
       }
       //instrukt. till ai
       const quizSystemPrompt = `Du är en lärare som skapar quiz för barn.
-		Skapa exakt 5 flervalsfrågor baserat på läxan.
+    Skapa exakt 5 flervalsfrågor baserat på läxan.
   		Svårighetsgrad: ${difficultyInstruction}
-		Returnera ENDAST en JSON-array enligt formatet:
-		[
-			{
-			"question": "Fråga",
-			"options": ["A","B","C","D"],
-			"correctAnswer": "A",
-			"explanation": "Kort förklaring"
-			}
-		]`;
+    Returnera ENDAST en JSON-array enligt formatet:
+    [
+      {
+      "question": "Frågetexten här",
+      "options": ["Svarsalternativ 1", "Svarsalternativ 2", "Svarsalternativ 3", "Svarsalternativ 4"],
+      "correctAnswer": "Svarsalternativ 1",
+      "explanation": "Kort förklaring varför detta är rätt"
+      }
+    ]
+    VIKTIGT: options ska bara vara svarstext (ingen bokstav A/B/C/D), och correctAnswer ska vara exakt samma text som ett av alternativen.`;
 
       const quizMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
         { role: "system", content: quizSystemPrompt },
@@ -266,6 +362,13 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
         console.error('Quiz parse error: model did not return JSON array', quizResponse.slice(0, 300));
         return res.status(502).json({ error: 'Quiz-svaret var inte giltig JSON. Försök igen.' });
       }
+	  /*
+      console.log('Quiz response from OpenAI:', quizResponse);
+      const jsonMatch = quizResponse.match(/\[[\s\S]*\]/);
+      const quizDataRaw = jsonMatch ? jsonMatch[0] : quizResponse;
+      console.log('Extracted JSON:', quizDataRaw);
+      const quizData = JSON.parse(quizDataRaw);
+      console.log('Parsed quiz data:', quizData);*/
 
       //returnera quiz till frontend
       return res.json({ quiz: quizData, timestamp });
@@ -375,6 +478,34 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
 
     const aiResponse = responseMessage.content;
 
+    const sessionResult = await db.send(new GetCommand({
+      TableName: tableName,
+      Key: {
+        pk,
+        sk: sessionSk
+      }
+    }));
+
+    const startedAt = typeof sessionResult.Item?.startedAt === 'string'
+      ? sessionResult.Item.startedAt
+      : timestamp;
+
+    const subjectValue = subject || (
+      typeof sessionResult.Item?.subject === 'string'
+        ? sessionResult.Item.subject
+        : 'Okänt'
+    );
+
+    await db.send(new PutCommand({
+      TableName: tableName,
+      Item: {
+        pk,
+        sk: sessionSk,
+        startedAt,
+        subject: subjectValue
+      }
+    }));
+
     // Spara user message
     await db.send(new PutCommand({
       TableName: tableName,
@@ -395,6 +526,25 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
         sk: `user#${userId}#SESSION#${sessionId}#MSG#${assistantTimestamp}`,
         role: 'assistant',
         text: aiResponse
+      }
+    }));
+
+    const durationMinutes = Math.max(
+      0,
+      Math.round((new Date(timestamp).getTime() - new Date(startedAt).getTime()) / 60000)
+    );
+
+    await db.send(new UpdateCommand({
+      TableName: tableName,
+      Key: {
+        pk,
+        sk: `${sessionSk}#STATS`
+      },
+      UpdateExpression: 'SET durationMinutes = :durationMinutes, quizScore = if_not_exists(quizScore, :quizScore) ADD questionCount :questionIncrement',
+      ExpressionAttributeValues: {
+        ':durationMinutes': durationMinutes,
+        ':quizScore': null,
+        ':questionIncrement': 1
       }
     }));
 
