@@ -6,21 +6,14 @@ import { SpeechToTextButton } from './SpeechToTextButton';
 import { QuizControl } from './QuizControl';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCamera, faPaperPlane, faTrashCan } from '@fortawesome/free-solid-svg-icons';
-import Tesseract from 'tesseract.js';
-
-import { getAuthHeader, decodeJwt } from '../utils/auth';
+import { getAuthHeader } from '../utils/auth';
 import { useLocation } from 'react-router';
+import { Message } from '../types/types';
+import { getAuthParams } from '../utils/authHelper';
+import {useChatHistory} from '../hooks/useChatHistory.ts';
+import { handleDeleteMessage } from '../hooks/useChatActions';
+import { useOcr } from '../hooks/useOcr';
 
-
-interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'ai';
-  timestamp: Date;
-  imageUrl?: string;
-  showSummaryButton?: boolean;
-  showQuizButton?: boolean;
-}
 
 export const ChatBot: React.FC = () => {
  
@@ -29,15 +22,24 @@ export const ChatBot: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [lastUploadedImage, setLastUploadedImage] = useState<File | null>(null);
-  const [ocrText, setOcrText] = useState('');
-  const [isOcrProcessing, setIsOcrProcessing] = useState(false);
-  const [showOcrEditor, setShowOcrEditor] = useState(false);
+
+  const {
+  ocrText,
+  setOcrText,
+  isOcrProcessing,
+  setIsOcrProcessing,
+  showOcrEditor,
+  setShowOcrEditor,
+  performOCR
+} = useOcr();
   
-  // Använd samma session per dag 
-  const [sessionId] = useState(() => {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    return `session_${today}`; // split('T')[0] tar bara datumdelen av ISO-strängen, så vi får en unik sessionId per dag. 
-  });
+
+const location = useLocation();
+
+const sessionId =
+  location.state?.loadSessionId ||
+  `session_${new Date().toISOString().split('T')[0]}`;
+const { messages, setMessages } = useChatHistory(sessionId);
   
   const messagesEndRef = useRef<HTMLDivElement>(null); // Ref för att scrolla till botten av chatten när nya meddelanden läggs till
   const fileInputRef = useRef<HTMLInputElement>(null); // Ref för att kunna rensa filinputen när en bild tas bort
@@ -46,160 +48,10 @@ export const ChatBot: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); // När ett nytt meddelande läggs till, scrolla till botten av chatten 
   };
 
-  const [messages, setMessages] = useState<Message[]>([]);
-
-  // funktion för att få userId och familyId från JWT
-  const getAuthParams = (): { userId: string; familyId: string } | null => { // Denna funktion hämtar JWT-token från localStorage, dekodar den och returnerar userId och familyId som behövs för att autentisera API-anropen. Om token inte finns eller inte kan dekodas, returnerar den null, vilket indikerar att användaren inte är inloggad. 
-    const token = localStorage.getItem('jwt');
-    if (!token) return null;
-    
-    const payload = decodeJwt(token); // Använder vår decodeJwt-funktion för att få ut payloaden från JWT-token, som innehåller userId och familyId. 
-    if (!payload) 
-		return null;
-    
-    return {
-      userId: payload.userId,
-      familyId: payload.familyId
-    };
-  };
-
+ 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  // Hämta chatthistorik när komponenten laddas
-  useEffect(() => {
-    const loadChatHistory = async () => {
-      const authParams = getAuthParams();
-      if (!authParams) {
-        return;
-      }
-    // Authorization-header skickas nu i chat-fetchar: getAuthHeader() hämtar JWT-token från localStorage.
-      try { 
-        const authHeader = getAuthHeader();
-        const headers: HeadersInit = authHeader ? { Authorization: authHeader } : {};
-        const response = await fetch(
-          `/api/chat/messages?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${sessionId}`,
-          { credentials: 'include', headers } // Skicka Authorization-header så servern kan validera JWT och hämta rätt användares historik.
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          const loadedMessages: Message[] = data.items.map((item: any, index: number) => {
-            const sk: string | undefined = typeof item.sk === 'string' ? item.sk : undefined;
-            const skTimestamp = sk && sk.includes('#MSG#') ? sk.split('#MSG#')[1] : undefined;
-            const fallbackTimestamp = item.timestamp || item.createdAt || new Date().toISOString();
-
-            return {
-              id: `${index}`,
-              text: item.text,
-              sender: item.role === 'user' ? 'user' : 'ai',
-              timestamp: new Date(skTimestamp || fallbackTimestamp)
-            };
-          });
-
-          // Lägg alltid till välkomstmeddelandet först
-          const welcomeMessage: Message = {
-            id: 'welcome',
-            text: 'Hej! Jag är din läxhjälps-assistent. Du kan skriva frågor eller ladda upp ett foto av din läxa! 📚📸',
-            sender: 'ai',
-            timestamp: new Date(new Date().setHours(0, 0, 0, 0)) // Början av dagen
-          };
-
-          setMessages([welcomeMessage, ...loadedMessages]);
-        } else {
-          // Om API-anropet misslyckas, visa välkomstmeddelande
-          console.log('Failed to fetch messages, showing welcome message');
-          setMessages([{
-            id: '1',
-            text: 'Hej! Jag är din läxhjälps-assistent. Du kan skriva frågor eller ladda upp ett foto av din läxa! 📚📸',
-            sender: 'ai',
-            timestamp: new Date()
-          }]);
-        }
-      } catch (error) {
-        console.error('Error loading chat history:', error);
-        // Visa välkomstmeddelande vid fel
-        setMessages([{
-          id: '1',
-          text: 'Hej! Jag är din läxhjälps-assistent. Du kan skriva frågor eller ladda upp ett foto av din läxa! 📚📸',
-          sender: 'ai',
-          timestamp: new Date()
-        }]);
-      }
-    };
-
-    loadChatHistory();
-  }, [sessionId]);
-
-   // Radera ett enskild meddelande
-  const handleDeleteMessage = async (messageId: string, timestamp: Date) => {
-    // Visa bekräftelseruta innan radering
-    if (!window.confirm('Är du säker att du vill ta bort detta meddelande?')) {
-      return;
-    }
-
-    const authParams = getAuthParams();
-    if (!authParams) return;
-    const authHeader = getAuthHeader();
-    if (!authHeader) return;
-
-    try {
-      const response = await fetch(
-        `/api/chat/message?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${sessionId}&timestamp=${timestamp.toISOString()}`,
-        {
-          method: 'DELETE',
-          credentials: 'include',
-          headers: {
-            Authorization: authHeader
-          }
-        }
-      );
-
-      if (response.ok) {
-        setMessages(prev => prev.filter(msg => msg.id !== messageId));
-      } else {
-        alert('Kunde inte ta bort meddelandet');
-      }
-    } catch (error) {
-      console.error('Fel när meddelandet skulle raderas:', error);
-     
-    }
-  };
-
-//radera hel chat session
-
-//visar bekräftelseruta, klickarman på avbryt så avslutas funkt.
-  const handleDeleteSession = async () => {
-    if (!window.confirm('Är du säker? Det går inte att ångra. Alla meddelanden i denna session kommer att raderas.')) {
-      return;
-    }
-
-    const authParams = getAuthParams();
-    if (!authParams) return;
-    const authHeader = getAuthHeader();
-    if (!authHeader) return;
-
-    try {
-      const response = await fetch(
-        `/api/chat/session?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${sessionId}`,
-        {
-          method: 'DELETE',
-          credentials: 'include',
-          headers: {
-            Authorization: authHeader
-          }
-        }
-      );
-
-      if (response.ok) {
-        setMessages([]);
-      }
-    } catch (error) {
-      console.error('Kunde inte ta bort session:', error);
-     
-    }
-  };
 
 
   // Hantera inklistring av bilder
@@ -243,6 +95,7 @@ export const ChatBot: React.FC = () => {
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => { // När användaren väljer en bildfil genom filinputen, hantera den valda bilden och skapa en förhandsvisning av den. 
     const file = e.target.files?.[0]; // Hämta den första valda filen från filinputen, eftersom vi bara tillåter en bild åt gången. Vi kollar om det finns en fil och om den är av typen bild (genom att kolla om file.type börjar med 'image/'), och om så är fallet, sätter vi den som den valda bilden i state och skapar en förhandsvisning av den. 
+    
     if (file && file.type.startsWith('image/')) {
       setSelectedImage(file);
       const reader = new FileReader();
@@ -253,41 +106,6 @@ export const ChatBot: React.FC = () => {
       
       // Starta OCR-behandling
       performOCR(file);
-    }
-  };
-
-  // OCR-funktion med Tesseract.js
-  const performOCR = async (imageFile: File) => {
-    setIsOcrProcessing(true);
-    setShowOcrEditor(false);
-    setOcrText('');
-
-    try {
-      const imageUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          resolve(reader.result as string);
-        };
-        reader.readAsDataURL(imageFile);
-      });
-
-      // Använd Tesseract.js för att extrahera text
-      const result = await Tesseract.recognize(
-        imageUrl,
-        'swe+eng', // Svenska och engelska
-        {
-          logger: (m) => console.log('OCR progress:', m.status, m.progress),
-        }
-      );
-
-      const extractedText = result.data.text;
-      setOcrText(extractedText);
-      setShowOcrEditor(true);
-      setIsOcrProcessing(false);
-    } catch (error) {
-      console.error('OCR error:', error);
-      setIsOcrProcessing(false);
-      alert('Kunde inte extrahera text från bilden. Prova en annan bild.');
     }
   };
 
@@ -477,39 +295,6 @@ export const ChatBot: React.FC = () => {
 
   const { loadSessionId } = useLocation().state || {};
 
-useEffect(() => {
-  if (loadSessionId) {
-    const loadPreviousSession = async () => {
-      const authParams = getAuthParams();
-      if (!authParams) return;
-
-      try {
-        const response = await fetch(
-          `/api/chat/messages?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${loadSessionId}`,
-          { credentials: 'include' }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          const loadedMessages: Message[] = data.items.map((item: any, index: number) => ({
-            id: `${index}`,
-            text: item.text,
-            sender: item.role === 'user' ? 'user' : 'ai',
-            timestamp: new Date(item.sk.split('#MSG#')[1])
-          }));
-
-          setMessages(loadedMessages);
-        } else {
-          console.log('Failed to fetch previous session messages');
-        }
-      } catch (error) {
-        console.error('Error loading previous session:', error);
-      }
-    };
-
-    loadPreviousSession();
-  }
-}, [loadSessionId]);
 
   const handleQuizComplete = async (quizScore: number, questionCount: number) => {
     const authParams = getAuthParams();
@@ -628,7 +413,7 @@ useEffect(() => {
                       {/* Ta bort enskilt meddelande */}
                       {message.id !== 'welcome' && (
                         <button
-                          onClick={() => handleDeleteMessage(message.id, message.timestamp)}
+                          onClick={() => handleDeleteMessage(message.id, message.timestamp, sessionId, setMessages)}
                           id="delete-message-btn"
                           title="Ta bort detta meddelande"
                         >
