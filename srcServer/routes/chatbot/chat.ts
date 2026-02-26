@@ -102,10 +102,12 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 }, // Max 20MB (ökad från 5MB för att stöda större bilder)
     fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    const isImage = file.mimetype.startsWith('image/');
+    const isPdf = file.mimetype === 'application/pdf';
+    if (isImage || isPdf) {
       cb(null, true);
     } else {
-      cb(new Error('Endast bilder är tillåtna'));
+      cb(new Error('Endast bilder eller PDF är tillåtna'));
     }
   }
 });
@@ -256,6 +258,31 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
     const timestamp = new Date().toISOString();
     const pk = `family#${familyId}`;
     const sessionSk = `user#${userId}#SESSION#${sessionId}`;
+
+    // PDF handling block
+    let pdfText = '';
+    const isPdf = imageFile?.mimetype === 'application/pdf';
+    if (imageFile && isPdf) {
+      // @ts-ignore
+      const pdfParse = require('pdf-parse');
+      let parsed: { text?: string } = {};
+      try {
+        parsed = await pdfParse(imageFile.buffer);
+      } catch (error) {
+        console.error('PDF-parse error:', error);
+        return res.status(400).json({
+          response: 'Kunde inte läsa PDF-filen.',
+          timestamp
+        });
+      }
+      pdfText = (parsed.text || '').trim();
+      if (!pdfText) {
+        return res.json({
+          response: 'PDF innehåller ingen markerbar text (troligen skannad).',
+          timestamp
+        });
+      }
+    }
 
     // Hämta user-itemet för att få birthDate
     let userAge: number | null = null;

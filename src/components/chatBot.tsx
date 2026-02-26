@@ -563,9 +563,9 @@ useEffect(() => {
                   }}
                   disabled={isLoading}
                 >
-                  <option value="easy">Lätt</option>
-                  <option value="medium">Mellan</option>
-                  <option value="hard">Svår</option>
+                  <option id='easy' value="easy">Lätt</option>
+                  <option id='medium-level' value="medium">Mellan</option>
+                  <option id='hard-level' value="hard">Svår</option>
                 </select>
                 {/* Visa användare att quiz laddas*/}
                  {isLoading && <span className="loading-spinner">⟳</span>}
@@ -715,7 +715,7 @@ useEffect(() => {
                   type="file"
                   ref={fileInputRef}
                   onChange={handleImageSelect}
-                  accept="image/*"
+                  accept="image/*,application/pdf"
                   capture="environment"
                   style={{ display: 'none' }}
                 />

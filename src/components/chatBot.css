@@ -494,12 +494,14 @@
       transition: all 0.2s;
     
     }
+   
 }
 .loading-spinner {
   display: inline-block;
   font-size: 1.2rem;
   animation: spin 1s linear infinite;
 }
+
 .quiz-header {
   margin: 0.1rem;
 
