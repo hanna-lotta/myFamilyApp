@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useQuiz } from '../hooks/useQuiz';
 import type { QuizQuestion } from '../hooks/useQuiz';
-import Select from 'react-select';
- 
+
 
 type QuizControlRenderProps = {
   isQuizMode: boolean;
