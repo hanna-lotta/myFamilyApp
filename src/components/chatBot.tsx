@@ -320,205 +320,245 @@ const { messages, setMessages } = useChatHistory(sessionId);
   };
 
   return (
-    <QuizControl
-      getAuthParams={getAuthParams}
-      lastUploadedImage={lastUploadedImage}
-      sessionId={sessionId}
-      setIsLoading={setIsLoading}
-      isLoading={isLoading}
-      lastUserMessage={[...messages].reverse().find(m => m.sender === 'user')?.text || ''}
-    >
-      {({ isQuizMode, setIsQuizMode, quizQuestions, handleQuizButton, difficulty, setDifficulty, generateQuiz }) => (
-        <div className="chatbot-container">
-          <div className="chat-frame">
-            <h2>Chat - {new Date().toLocaleDateString('sv-SE')}</h2>
-            {isQuizMode && (
-              <label className="quiz-difficulty">
-                nivå
-                <select
-                  value={difficulty}
-                  onChange={(e) => {
-                    const newDifficulty = e.target.value as 'easy' | 'medium' | 'hard';
-                    setDifficulty(newDifficulty);
-                    generateQuiz(newDifficulty);
-                  }}
-                  disabled={isLoading}
-                >
-                  <option id='easy' value="easy">Lätt</option>
-                  <option id='medium-level' value="medium">Mellan</option>
-                  <option id='hard-level' value="hard">Svår</option>
-                </select>
-                {/* Visa användare att quiz laddas*/}
-                 {isLoading && <span className="loading-spinner">⟳</span>}
-              </label>
-            )}
-            
+  <QuizControl
+    getAuthParams={getAuthParams}
+    lastUploadedImage={lastUploadedImage}
+    sessionId={sessionId}
+    setIsLoading={setIsLoading}
+    isLoading={isLoading}
+    lastUserMessage={[...messages].reverse().find(m => m.sender === 'user')?.text || ''}
+  >
+    {({
+      isQuizMode,
+      setIsQuizMode,
+      quizQuestions,
+      handleQuizButton,
+      difficulty,
+      setDifficulty,
+      generateQuiz
+    }) => (
+      <div className="chatbot-container">
+        <div className="chat-frame">
+          <h2>Chat - {new Date().toLocaleDateString('sv-SE')}</h2>
 
-          </div>
-              
-          {isQuizMode ? (
-            <Quiz
-            // key används för att tvinga omrendering av Quiz-komponenten när svårighetsgraden ändras eller nya frågor genereras
-              key={`${difficulty}-${quizQuestions.length}`}
-              questions={quizQuestions}
-              onAnswerSubmit={(answer) => console.log('Svar:', answer)}
-              onQuizComplete={handleQuizComplete}
-              onQuizEnd={() => setIsQuizMode(false)}
-            />
-          ) : (
-            <div className="chat-messages">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`message ${message.sender === 'user' ? 'user-message' : 'ai-message'}`}
-                >
-                  <div className="message-content">
-                    {message.imageUrl && (
-                      <img src={message.imageUrl} alt="Uppladdad läxa" className="message-image" />
-                    )}
-                    <p>{message.text}</p>
-                    <div className="button-container">
-                      {message.showSummaryButton && (
-                        <button 
-                          onClick={handleSummaryRequest}
-                          className="summary-button"
-                          disabled={isLoading}
-                        >
+          {isQuizMode && (
+            <label className="quiz-difficulty">
+              nivå
+              <select
+                value={difficulty}
+                onChange={(e) => {
+                  const newDifficulty = e.target.value as 'easy' | 'medium' | 'hard';
+                  setDifficulty(newDifficulty);
+                  generateQuiz(newDifficulty);
+                }}
+                disabled={isLoading}
+              >
+                <option id="easy" value="easy">Lätt</option>
+                <option id="medium-level" value="medium">Mellan</option>
+                <option id="hard-level" value="hard">Svår</option>
+              </select>
+              {isLoading && <span className="loading-spinner">⟳</span>}
+            </label>
+          )}
+        </div>
+
+        {isQuizMode ? (
+          <Quiz
+            key={`${difficulty}-${quizQuestions.length}`}
+            questions={quizQuestions}
+            onAnswerSubmit={(answer) => console.log('Svar:', answer)}
+            onQuizComplete={handleQuizComplete}
+            onQuizEnd={() => setIsQuizMode(false)}
+          />
+        ) : (
+          <div className="chat-messages">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`message ${message.sender === 'user' ? 'user-message' : 'ai-message'}`}
+              >
+                <div className="message-content">
+                  {message.imageUrl && (
+                    <img
+                      src={message.imageUrl}
+                      alt="Uppladdad läxa"
+                      className="message-image"
+                    />
+                  )}
+
+                  <p>{message.text}</p>
+
+                  <div className="button-container">
+                    {message.showSummaryButton && (
+                      <button
+                        onClick={handleSummaryRequest}
+                        className="summary-button"
+                        disabled={isLoading}
+                      >
                         Sammanfatta
-                        </button>
-                      )}
+                      </button>
+                    )}
 
-                      {message.showQuizButton && (
-                        <button
-                          onClick={handleQuizButton}
-                          className="quiz-button"
-                          disabled={isLoading} >
-                          Skapa quiz 
-                        </button>
-                      )}
-                      <div className='timestamp-speak-box'>
+                    {message.showQuizButton && (
+                      <button
+                        onClick={handleQuizButton}
+                        className="quiz-button"
+                        disabled={isLoading}
+                      >
+                        Skapa quiz
+                      </button>
+                    )}
+
+                    <div className="timestamp-speak-box">
                       <span className="message-time">
-                        {message.timestamp.toLocaleTimeString('sv-SE', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
+                        {message.timestamp.toLocaleTimeString('sv-SE', {
+                          hour: '2-digit',
+                          minute: '2-digit'
                         })}
                       </span>
 
                       <SpeakButton text={message.text} />
 
-                      {/* Ta bort enskilt meddelande */}
                       {message.id !== 'welcome' && (
                         <button
-                          onClick={() => handleDeleteMessage(message.id, message.timestamp, sessionId, setMessages)}
+                          onClick={() =>
+                            handleDeleteMessage(message.id, message.timestamp, sessionId, setMessages)
+                          }
                           id="delete-message-btn"
                           title="Ta bort detta meddelande"
                         >
                           <FontAwesomeIcon icon={faTrashCan} />
                         </button>
-                        
                       )}
-                      </div>
                     </div>
                   </div>
                 </div>
-              ))}
-              {isLoading && (
-                <div className="message ai-message">
-                  <div className="message-content">
-                    <div className="typing-indicator">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
+              </div>
+            ))}
 
-          {!isQuizMode && (
-            <div className="chat-input-container">
-              {imagePreview && (
-                <div className="image-preview">
-                  <img src={imagePreview} alt="Preview" />
-                  <button onClick={handleRemoveImage} className="remove-image-btn">×</button>
-                </div>
-              )}
-              
-              {/* OCR-texteredigerare */}
-              {showOcrEditor && !isOcrProcessing && (
-                <div className="ocr-editor">
-                  <div className="ocr-header">
-                    <h4>📝 Extraherad text från bilden (redigera vid behov):</h4>
-                    {isOcrProcessing && <p className="ocr-loading">Bearbetar text...</p>}
-                  </div>
-                  <textarea
-                    value={ocrText}
-                    onChange={(e) => setOcrText(e.target.value)}
-                    placeholder="Extraherad text visas här..."
-                    className="ocr-textarea"
-                    rows={4}
-                    disabled={isOcrProcessing || isLoading}
-                  />
-                  <div className="ocr-actions">
-                    <button 
-                      onClick={() => {
-                        setInputText(ocrText);
-                        setShowOcrEditor(false);
-                      }}
-                      disabled={isLoading || !ocrText.trim()}
-                      className="ocr-send-btn"
-                    >
-                      ✓ Använd denna text
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setShowOcrEditor(false);
-                        setOcrText('');
-                      }}
-                      className="ocr-cancel-btn"
-                    >
-                      ✕ Avbryt
-                    </button>
+            {isLoading && (
+              <div className="message ai-message">
+                <div className="message-content">
+                  <div className="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {isOcrProcessing && (
-                <div className="ocr-loading-container">
-                  <p>🔄 Läser in text från bilden...</p>
-                </div>
-              )}
-              
-        <div className="textarea-button-wrapper" style={{ position: 'relative', width: '100%' }}>
-          <textarea
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Skriv din fråga här..."
-            className="chat-input"
-            rows={2}
-            disabled={isLoading}
-            style={{ width: '100%' }}
-          />
-          <div style={{ position: 'absolute', top: '95%', left: 8, transform: 'translateY(-50%)' }}>
-            <PlusButton
-              disabled={isLoading}
-              onAttachClick={() => fileInputRef.current?.click()}
-              onEmojiClick={() => {}}
-              onSendClick={handleSendMessage}
-              sendDisabled={!inputText.trim() && !selectedImage}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+
+        {!isQuizMode && (
+          <div className="chat-input-container">
+           
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageSelect}
+              accept="image/*,application/pdf"
+              capture="environment"
+             
             />
-          </div>
-          <div style={{ position: 'absolute', top: '50%', right: 8, transform: 'translateY(-50%)' }}>
-            <SpeechToTextButton onResult={(text) => setInputText(text)} />
-          </div>
-        </div>
+
+            {imagePreview && (
+              <div className="image-preview">
+                <img src={imagePreview} alt="Preview" />
+                <button onClick={handleRemoveImage} className="remove-image-btn">×</button>
+              </div>
+            )}
+
+            {/* OCR-texteredigerare */}
+            {showOcrEditor && !isOcrProcessing && (
+              <div className="ocr-editor">
+                <div className="ocr-header">
+                  <h4>📝 Extraherad text från bilden (redigera vid behov):</h4>
+                  {isOcrProcessing && <p className="ocr-loading">Bearbetar text...</p>}
+                </div>
+
+                <textarea
+                  value={ocrText}
+                  onChange={(e) => setOcrText(e.target.value)}
+                  placeholder="Extraherad text visas här..."
+                  className="ocr-textarea"
+                  rows={4}
+                  disabled={isOcrProcessing || isLoading}
+                />
+
+                <div className="ocr-actions">
+                  <button
+                    onClick={() => {
+                      setInputText(ocrText);
+                      setShowOcrEditor(false);
+                    }}
+                    disabled={isLoading || !ocrText.trim()}
+                    className="ocr-send-btn"
+                  >
+                    ✓ Använd denna text
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowOcrEditor(false);
+                      setOcrText('');
+                    }}
+                    className="ocr-cancel-btn"
+                  >
+                    ✕ Avbryt
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {isOcrProcessing && (
+              <div className="ocr-loading-container">
+                <p>🔄 Läser in text från bilden...</p>
+              </div>
+            )}
+
+            <div className="textarea-button-wrapper" >
+              <textarea
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Skriv din fråga här..."
+                className="chat-input"
+                rows={2}
+                disabled={isLoading}
+              />
+
+              {/* Plus-knapp inne i textfältet (vänster) */}
+              <div className='plus-box'
+              >
+                <PlusButton
+                  disabled={isLoading}
+                  onAttachClick={() => fileInputRef.current?.click()}
+                  onEmojiClick={() => {}}
+                  onSendClick={handleSendMessage}
+                  sendDisabled={!inputText.trim() && !selectedImage}
+                />
+              </div>
+
+              {/* Speech-to-text inne i textfältet (höger) */}
+              <div className='speech-box'
+              >
+                <SpeechToTextButton onResult={(text) => setInputText(text)} />
+              </div>
+              <button
+              onClick={handleSendMessage}
+              disabled={(!inputText.trim() && !selectedImage) || isLoading}
+              className="send-button"
+            >
+              <FontAwesomeIcon icon={faPaperPlane} />
+            </button>
             </div>
-          )}
-        </div>
-      )}
-    </QuizControl>
-  );
+          </div>
+        )}
+      </div>
+    )}
+  </QuizControl>
+);
 };
