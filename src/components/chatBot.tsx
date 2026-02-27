@@ -48,11 +48,6 @@ const { messages, setMessages } = useChatHistory(sessionId);
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); // När ett nytt meddelande läggs till, scrolla till botten av chatten 
   };
 
- 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
 
   // Hantera inklistring av bilder
   useEffect(() => {
@@ -293,7 +288,7 @@ const { messages, setMessages } = useChatHistory(sessionId);
     }
   };
 
-  const { loadSessionId } = useLocation().state || {};
+  // const { loadSessionId } = useLocation().state || {};
 
 
   const handleQuizComplete = async (quizScore: number, questionCount: number) => {

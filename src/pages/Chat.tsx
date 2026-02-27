@@ -47,14 +47,14 @@ export const Chat: React.FC = () => {
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
-   const [messages, setMessages] = useState<Message[]>([]);
+  //  const [messages, setMessages] = useState<Message[]>([]);
 
 
   // Använd samma session per dag istället för ny vid varje reload
-    const [sessionId] = useState(() => {
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      return `session_${today}`;
-    });
+    // const [sessionId] = useState(() => {
+    //   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    //   return `session_${today}`;
+    // });
 
   //hämtar tidigare konversationer 
   useEffect(() => {
