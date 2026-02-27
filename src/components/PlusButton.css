@@ -25,13 +25,6 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
-.plus-button-box {
-  position: absolute;
-      right: 470px;
-    bottom: -20px;  
-  z-index: 2;
-  
-}
 
 .plus-button {
   width: 42px;

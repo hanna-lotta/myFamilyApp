@@ -15,7 +15,7 @@ export const PlusButton: React.FC<PlusButtonProps> = ({ disabled, onAttachClick,
   const [showExtraButtons, setShowExtraButtons] = useState(false);
 
   return (
-    <div className='plus-button-box' >
+    <>
       <button
         type="button"
         className="plus-button"
@@ -45,6 +45,6 @@ export const PlusButton: React.FC<PlusButtonProps> = ({ disabled, onAttachClick,
           </button>
         </div>
       )}
-    </div>
+    </>
   );
 };
