@@ -85,7 +85,7 @@
 }
 
 
-.chat-wrapper button:not(.summary-button):not(.quiz-button):not(#speak-button):not(#delete-message-btn) {
+.chat-wrapper button:not(.summary-button):not(.quiz-button):not(#speak-button):not(#delete-message-btn):not(.plus-button) {
 	padding: 0.375rem 0.75rem;
 	border-radius: 16px;
 	font-size: 16px;

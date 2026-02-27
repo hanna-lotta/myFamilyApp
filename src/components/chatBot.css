@@ -368,9 +368,9 @@
 }
 
 .input-field-wrapper .speech-button {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
+  position: static;
+  align-self: center;
+  margin-left: 0.5rem;
   background: none !important;
   border: none !important;
   color: var(--text);
@@ -417,6 +417,7 @@
 
 .chat-input::placeholder {
   color: rgba(255,255,255,.40);
+  text-align: center;
 }
 
 .chat-input:disabled {

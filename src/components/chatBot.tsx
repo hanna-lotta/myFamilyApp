@@ -13,6 +13,7 @@ import { getAuthParams } from '../utils/authHelper';
 import {useChatHistory} from '../hooks/useChatHistory.ts';
 import { handleDeleteMessage } from '../hooks/useChatActions';
 import { useOcr } from '../hooks/useOcr';
+import { PlusButton } from './PlusButton';
 
 
 export const ChatBot: React.FC = () => {
@@ -490,46 +491,30 @@ const { messages, setMessages } = useChatHistory(sessionId);
                 </div>
               )}
               
-              <div className="input-row">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageSelect}
-                  accept="image/*,application/pdf"
-                  capture="environment"
-                  style={{ display: 'none' }}
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isLoading}
-                  className="attach-button"
-                  title="Ta foto, välj från galleri eller klistra in bild"
-                >
-                  <FontAwesomeIcon icon={faCamera} />
-                </button>
-
-                <div className="input-field-wrapper">
-                  <textarea
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Skriv din fråga här, klistra in en bild, eller ladda upp från kamera/galleri..."
-                    className="chat-input"
-                    rows={2}
-                    disabled={isLoading}
-                    
-                  />
-                  <SpeechToTextButton onResult={(text) => setInputText(text)} />
-                </div>
-              
-                <button
-                  onClick={handleSendMessage}
-                  disabled={(!inputText.trim() && !selectedImage) || isLoading}
-                  className="send-button"
-                >
-                   <FontAwesomeIcon icon={faPaperPlane} />
-                </button>
-              </div>
+        <div className="textarea-button-wrapper" style={{ position: 'relative', width: '100%' }}>
+          <textarea
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Skriv din fråga här..."
+            className="chat-input"
+            rows={2}
+            disabled={isLoading}
+            style={{ width: '100%' }}
+          />
+          <div style={{ position: 'absolute', top: '95%', left: 8, transform: 'translateY(-50%)' }}>
+            <PlusButton
+              disabled={isLoading}
+              onAttachClick={() => fileInputRef.current?.click()}
+              onEmojiClick={() => {}}
+              onSendClick={handleSendMessage}
+              sendDisabled={!inputText.trim() && !selectedImage}
+            />
+          </div>
+          <div style={{ position: 'absolute', top: '50%', right: 8, transform: 'translateY(-50%)' }}>
+            <SpeechToTextButton onResult={(text) => setInputText(text)} />
+          </div>
+        </div>
             </div>
           )}
         </div>

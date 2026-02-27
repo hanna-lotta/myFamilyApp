@@ -1,0 +1,61 @@
+.chat-wrapper .plus-button {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 999px;
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+.chat-wrapper .plus-button:hover:not(:disabled) {
+  transform: rotate(90deg);
+  filter: saturate(1.05) brightness(1.02);
+}
+
+.chat-wrapper .plus-button:active:not(:disabled) {
+  transform: rotate(90deg) scale(0.98);
+}
+
+.chat-wrapper .plus-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.plus-button-box {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;   
+  z-index: 2;
+  
+}
+
+.plus-button {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  transition: transform .2s ease;
+}
+
+.plus-button.active {
+  transform: rotate(45deg);
+}
+
+/* menyn som dyker upp */
+.plus-menu {
+  display: flex;
+  gap: 8px;
+  margin-left: 8px;
+  animation: fadeIn .15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
