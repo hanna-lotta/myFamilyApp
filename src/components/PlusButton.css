@@ -1,3 +1,7 @@
+/* Gör så att emoji-picker placeras relativt denna container */
+.plus-button-container {
+  position: relative;
+}
 .chat-wrapper .plus-button {
   width: 36px;
   height: 36px;
@@ -50,7 +54,7 @@
 .emoji-box {
   position: absolute;
   top: -50px;
-  left: 10px;
+  left: 0px;
   display: flex;
   flex-direction: row;
   gap: 0.2rem;
@@ -60,4 +64,30 @@
 @keyframes fadeIn {
   from { opacity: 0; transform: translateX(-6px); }
   to { opacity: 1; transform: translateX(0); }
+}
+/* I PlusButton.css */
+.emoji-picker-wrapper {
+  position: absolute;
+  bottom: 60px; /* Flyttar upp rutan ovanför input-fältet */
+  left: 0;
+  z-index: 9999; /* Garanterar att den ligger överst */
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  border-radius: 10px;
+}
+.emoji-close-button {
+  position: absolute;
+  top: 6px;
+  right: 8px; 
+  z-index: 10000;
+  background: none;
+  border:none; 
+  font-size: 22px; 
+  cursor: pointer; 
+}
+/* Mobil-justering för emojiväljaren */
+@media (max-width: 768px) {
+  .emoji-picker-wrapper {
+    left: -10px; /* Flytta lite för att inte hamna utanför vänsterkanten */
+    bottom: 55px;
+  }
 }
