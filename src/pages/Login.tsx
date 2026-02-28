@@ -31,11 +31,6 @@ const Login = () => {
 	
 	const LS_KEY = 'jwt' //nyckel för att spara token i localstorage
 
-	const generateInviteCode = () => {
-		const raw = crypto.randomUUID().split('-')[0] || '--------';
-		return raw.toUpperCase();
-	};
-
 	const copyToClipboard = (text: string) => {
 		navigator.clipboard.writeText(text);
 		setCopiedCode(text);
@@ -164,6 +159,7 @@ const Login = () => {
 				
 				// Visa invite-kod modal om användaren skapade en ny familj
 				if (data.inviteCode) {
+					// inviteCode skickas av backend endast när registreringen skapade en ny familj
 					setInviteCode(data.inviteCode)
 					setRegisterStep('accountCreated')
 				} else {
@@ -246,7 +242,6 @@ const Login = () => {
 									onClick={async () => {
 										if (!birthDate) return;
 										
-										const token = localStorage.getItem('jwt');
 										const authHeader = getAuthHeader();
 										if (!authHeader) {
 											console.error('No token found');

@@ -233,6 +233,7 @@ router.post('/', async (req: Request<{}, JwtResponse, UserBody>, res: Response<J
 		};
 
 		if (familyInviteCode) { // Om en ny familj skapades, inkludera invite-koden i svaret så att klienten kan visa den för användaren att dela med familjemedlemmar. Om användaren gick med i en befintlig familj, kommer denna kod att vara undefined och inte inkluderas i svaret.
+			// Frontend (Login.tsx) läser data.inviteCode för att visa modal med koden efter ny familjeskapning.
 			responseObj.inviteCode = familyInviteCode; 
 		}
 
