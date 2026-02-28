@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useState } from 'react';
 import { getAuthHeader } from '../utils/auth';
 import './ParentView.css';
@@ -18,7 +19,9 @@ type DailyStat = {
 };
 
 type SessionSummary = {
+	childUserId: string;
 	sessionId: string;
+	title: string;
 	startedAt: string;
 	subject: string;
 	durationMinutes: number;
@@ -26,44 +29,23 @@ type SessionSummary = {
 	quizScore: number | null;
 };
 
-const mockOverview: ParentOverview = {
-	totalMinutes: 145,
-	questionCount: 23,
-	avgQuizScore: 78,
-	topSubject: 'Biologi',
-	sessionsCount: 4
+type SessionMessage = {
+	role: 'user' | 'assistant';
+	text: string;
 };
 
-const mockDailyStats: DailyStat[] = [
-	{ date: '2026-02-18', minutes: 20, questionCount: 3, avgQuizScore: 72 },
-	{ date: '2026-02-19', minutes: 35, questionCount: 6, avgQuizScore: 80 },
-	{ date: '2026-02-20', minutes: 10, questionCount: 2, avgQuizScore: 65 },
-	{ date: '2026-02-21', minutes: 50, questionCount: 8, avgQuizScore: 85 },
-	{ date: '2026-02-22', minutes: 30, questionCount: 4, avgQuizScore: 78 }
-];
+type ParentOverviewResponse = {
+	overview: ParentOverview;
+	childUsername: string | null;
+	dailyStats: DailyStat[];
+	recentSessions: SessionSummary[];
+};
 
-const mockSessions: SessionSummary[] = [
-	{
-		sessionId: 'sess01',
-		startedAt: '2026-02-22T09:10:00Z',
-		subject: 'Biologi',
-		durationMinutes: 35,
-		questionCount: 6,
-		quizScore: 80
-	},
-	{
-		sessionId: 'sess00',
-		startedAt: '2026-02-21T16:30:00Z',
-		subject: 'Matematik',
-		durationMinutes: 50,
-		questionCount: 8,
-		quizScore: 85
-	}
-];
-
-const toDateInputValue = (date: Date): string => date.toISOString().split('T')[0];
 
 const ParentView = () => {
+
+
+	const toDateInputValue = (date: Date): string => date.toISOString().split('T')[0];
 	const today = new Date();
 	const lastWeek = new Date();
 	lastWeek.setDate(today.getDate() - 6);
@@ -71,11 +53,15 @@ const ParentView = () => {
 	const [fromDate, setFromDate] = useState<string>(toDateInputValue(lastWeek));
 	const [toDate, setToDate] = useState<string>(toDateInputValue(today));
 	const [overview, setOverview] = useState<ParentOverview | null>(null);
+	const [childUsername, setChildUsername] = useState<string>('Barnet');
 	const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
 	const [sessions, setSessions] = useState<SessionSummary[]>([]);
+	const [selectedSession, setSelectedSession] = useState<SessionSummary | null>(null);
+	const [sessionMessages, setSessionMessages] = useState<SessionMessage[]>([]);
+	const [sessionLoading, setSessionLoading] = useState(false);
+	const [sessionError, setSessionError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [usingMock, setUsingMock] = useState(false);
 
 	const maxMinutes = useMemo(() => {
 		return Math.max(1, ...dailyStats.map((day) => day.minutes));
@@ -85,8 +71,6 @@ const ParentView = () => {
 		const fetchOverview = async () => {
 			setLoading(true);
 			setError(null);
-			setUsingMock(false);
-
 			try {
 				const authHeader = getAuthHeader();
 				const headers: HeadersInit = authHeader ? { Authorization: authHeader } : {};
@@ -96,32 +80,58 @@ const ParentView = () => {
 					throw new Error('Failed to load parent overview');
 				}
 
-				const data = await response.json();
+				const data: ParentOverviewResponse = await response.json();
 				setOverview(data.overview);
+				setChildUsername(data.childUsername || 'Barnet');
 				setDailyStats(data.dailyStats || []);
 				setSessions(data.recentSessions || []);
 			} catch (err) {
-				setOverview(mockOverview);
-				setDailyStats(mockDailyStats);
-				setSessions(mockSessions);
-				setUsingMock(true);
-				setError('Kunde inte hämta live-data. Visar demo-exempel.');
+				setError('Kunde inte hämta live-data.');
 			} finally {
 				setLoading(false);
 			}
 		};
-
 		fetchOverview();
 	}, [fromDate, toDate]);
 
+	const handleOpenSession = async (session: SessionSummary) => {
+		setSelectedSession(session);
+		setSessionError(null);
+		setSessionLoading(true);
+
+
+
+		try {
+			const authHeader = getAuthHeader();
+			const headers: HeadersInit = authHeader ? { Authorization: authHeader } : {};
+			const response = await fetch(
+				`/api/chat/messages/parent?childUserId=${session.childUserId}&sessionId=${session.sessionId}`,
+				{ headers }
+			);
+
+			if (!response.ok) {
+				throw new Error('Kunde inte hämta sessionen');
+			}
+
+			const data = await response.json();
+			setSessionMessages(Array.isArray(data.items) ? data.items : []);
+		} catch (err) {
+			setSessionError('Kunde inte hämta hela sessionen. Försök igen.');
+			setSessionMessages([]);
+		} finally {
+			setSessionLoading(false);
+		}
+	};
+
 	return (
-		<div className="parent-view">
+		<>
+			<div className="parent-view">
 			<div className="parent-header">
 				<div>
 					<h2>Föräldraöversikt</h2>
-					<p className="parent-subtitle">Sammanfattning av barnets chatthistorik och studiestatistik.</p>
+					<p className="parent-subtitle">Sammanfattning av {childUsername}s chatthistorik och studiestatistik.</p>
 				</div>
-				{usingMock && <span className="badge">Demo</span>}
+				{/* {usingMock && <span className="badge">Demo</span>} */}
 			</div>
 
 			<div className="filters">
@@ -179,9 +189,10 @@ const ParentView = () => {
 			</div>
 
 			<div className="panel">
-				<h3>Senaste sessioner</h3>
+				<h3>Senaste sessioner för {childUsername}</h3>
 				<div className="session-table">
 					<div className="session-row session-header">
+						<span>Rubrik</span>
 						<span>Datum</span>
 						<span>Ämne</span>
 						<span>Tid</span>
@@ -190,6 +201,15 @@ const ParentView = () => {
 					</div>
 					{sessions.map((session) => (
 						<div key={session.sessionId} className="session-row">
+							<span>
+								<button
+									type="button"
+									className="session-title-btn"
+									onClick={() => handleOpenSession(session)}
+								>
+									{session.title || 'Konversation'}
+								</button>
+							</span>
 							<span>{new Date(session.startedAt).toLocaleDateString('sv-SE')}</span>
 							<span>{session.subject}</span>
 							<span>{session.durationMinutes} min</span>
@@ -198,8 +218,52 @@ const ParentView = () => {
 						</div>
 					))}
 				</div>
+
+				{selectedSession && (
+					<div className="session-detail">
+						<div className="session-detail-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+							<div>
+								<h4 style={{ margin: 0 }}>{selectedSession.title || 'Konversation'}</h4>
+								<span>{new Date(selectedSession.startedAt).toLocaleString('sv-SE')}</span>
+							</div>
+							<button
+								type="button"
+								className="close-session-btn"
+								onClick={() => setSelectedSession(null)}
+							>
+								Stäng session
+							</button>
+						</div>
+						{sessionLoading && <p className="session-detail-status">Laddar hela sessionen...</p>}
+						{sessionError && <p className="session-detail-status error">{sessionError}</p>}
+						{!sessionLoading && !sessionError && (
+							<div className="session-detail-messages">
+								{sessionMessages.map((message, index) => (
+									<div
+										key={`${selectedSession.sessionId}-${index}`}
+										className={`session-detail-message ${message.role === 'user' ? 'user' : 'assistant'}`}
+									>
+										<span className="session-detail-role">{message.role === 'user' ? childUsername : 'AI'}</span>
+										<p>{message.text}</p>
+									</div>
+								))}
+								{sessionMessages.length === 0 && (
+									<p className="session-detail-status">Inga meddelanden hittades i sessionen.</p>
+								)}
+							</div>
+						)}
+					</div>
+				)}
 			</div>
+
+			{/* Footer text and links */}
+			<footer className="parent-footer">
+				<p style={{ color: 'rgba(255,255,255,.92)', fontSize: '0.95rem', margin: '0 0 0.5rem 0' }}>Följ oss på sociala medier</p>
+				<div style={{ width: '40px', height: '2px', background: 'linear-gradient(90deg, transparent, var(--accent1), transparent)', margin: '0.5rem auto' }}></div>
+				<a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent3)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: '500' }}>LinkedIn</a>
+			</footer>
 		</div>
+		</>
 	);
 };
 
