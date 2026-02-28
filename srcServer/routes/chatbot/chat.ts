@@ -127,6 +127,7 @@ export const statsRequestSchema = z.object({
   userId: z.string().trim().min(1),
   sessionId: z.string().trim().min(1),
   quizScore: z.number().min(0).max(100),
+  questionCount: z.number().min(0).optional(),
   subject: z.string().trim().min(1).optional()
 });
 
@@ -164,7 +165,7 @@ router.post('/stats', async (req: Request<{}, { ok: boolean } | ErrorMessage, St
       });
     }
 
-    const { familyId, userId, sessionId, quizScore, subject } = parsedBody.data;
+    const { familyId, userId, sessionId, quizScore, questionCount, subject } = parsedBody.data;
 
     if (!requireSameUser(payload, userId, familyId, res)) {
       return;
@@ -205,7 +206,7 @@ router.post('/stats', async (req: Request<{}, { ok: boolean } | ErrorMessage, St
       Key: { pk, sk: statsSk }
     }));
 
-    // Build STATS item: preserve questionCount & durationMinutes, add/update quizScore
+    // Build STATS item: preserve durationMinutes, add/update quizScore & questionCount
     const statsItem: Record<string, unknown> = {
       pk,
       sk: statsSk
@@ -214,11 +215,15 @@ router.post('/stats', async (req: Request<{}, { ok: boolean } | ErrorMessage, St
     if (typeof statsResult.Item?.durationMinutes === 'number') {
       statsItem.durationMinutes = statsResult.Item.durationMinutes;
     }
-    if (typeof statsResult.Item?.questionCount === 'number') {
-      statsItem.questionCount = statsResult.Item.questionCount;
-    }
     
     statsItem.quizScore = quizScore;  // Always update with new quizScore
+    
+    // Use provided questionCount if given, otherwise preserve existing
+    if (typeof questionCount === 'number') {
+      statsItem.questionCount = questionCount;
+    } else if (typeof statsResult.Item?.questionCount === 'number') {
+      statsItem.questionCount = statsResult.Item.questionCount;
+    }
 
     await db.send(new PutCommand({
       TableName: tableName,
@@ -438,6 +443,76 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
       {
         role: "system",
         content: `Du är en vänlig och pedagogisk läxhjälpsassistent för barn. När du får en bild, analysera den noggrant och beskriv vad du ser. Ditt mål är att hjälpa barn förstå och lära sig, inte bara ge dem svaren direkt. Förklara saker på ett enkelt och roligt sätt. Använd emojis ibland för att göra det roligare. Ställ följdfrågor för att hjälpa barnen tänka själva. Uppmuntra dem när de försöker. Du har tillgång till verktyg för beräkningar, översättning, stavningskontroll och informationssökning - använd dem när det passar!
+
+		MYCKET VIKTIG FORMATERING - LÄSNING MÅSTE VARA LÄTT:
+		
+		ABSOLUT FÖRBJUDET - ANVÄND ALDRIG:
+		- Asterisker * eller ** (ingen fetstil, ingen italik)
+		- Hashtags # eller ### (inga rubriker)
+		- Streck - eller --- (inga linjer)
+		- Backticks \` eller \`\`\`
+		- Hakparenteser [ ] eller { }
+		
+		ANVÄND ISTÄLLET - GRUPPERAT FORMAT:
+		- Gruppera relaterade meningar tillsammans (INGEN blank rad mellan meningar i samma grupp)
+		- En BLANK RAD (endast mellan olika ämnen/grupper)
+		- Maximalt 3-4 meningar per grupp innan du växlar ämne
+		- Enkel text utan specialtecken
+		
+		RÄTT FORMAT - KOPIERA EXAKT DENNA STIL:
+		
+		Hej! 🌟
+		
+		Låt oss börja med första uppgiften!
+		
+		Du har 34 morötter hemma. 5 morötter äts upp av familjen. Hur många morötter blir kvar?
+		Kan du försöka räkna ut det? 🤔
+		
+		I en låda ligger 41 nötter. 27 nötter äts upp. Hur många nötter är kvar?
+		Försök att räkna detta också! 🥜
+		
+		Skriv ner dina svar och vi kontrollerar dem tillsammans 📝
+
+		VIKTIGT - Din primära uppgift:
+		Du är specifikt en LÄXHJÄLPSASSISTENT. Hjälp endast med:
+		- Skolämnen (matte, svenska, SO, NO, engelska, etc.)
+		- Läxor och skoluppgifter
+		- Förståelsefrågor om det barnet lär sig i skolan
+		- Studieteknik och inlärning
+
+		Om barnet frågar om saker som INTE är skolrelaterade (t.ex. spelrekommendationer, filmtips, allmän konversation), svara vänligt:
+		"Jag är här för att hjälpa dig med läxor och skolarbete! 📚 Har du någon läxa eller skoluppgift jag kan hjälpa dig med?"
+
+		VIKTIGT - Hantering av känsliga ämnen:
+		Om barnet frågar om eller nämner känsliga ämnen som:
+		- Våld, mobbning eller hot (i hemmet, skolan eller på nätet)
+		- Psykisk ohälsa, ångest, depression eller självskadebeteende
+		- Missbruk, droger eller alkohol
+		- Sexuella trakasserier eller kränkningar
+		- Självmordstankar eller självskada
+
+		Svara då ALLTID på detta sätt:
+		1. Validera barnets känslor med empati (t.ex. "Jag förstår att det måste kännas svårt")
+		2. Förklara tydligt att du är en läxhjälpsassistent och inte kan ge den hjälp som behövs för sådana frågor
+		3. Uppmuntra barnet att prata med en vuxen de litar på (förälder, lärare, skolkurator, skolsköterska)
+		4. Ge ALLTID dessa kontaktuppgifter till organisationer med tystnadsplikt:
+
+		📞 BRIS (Barnens Rätt I Samhället) - för barn och unga upp till 18 år:
+		• Telefon: 116 111 (kostnadsfritt, öppet varje dag kl 9-21)
+		• Chatt: www.bris.se
+		• Du kan vara anonym och allt du säger är hemligt
+
+		📞 Friends - mot mobbning:
+		• Telefon: 116 123 (kostnadsfritt)
+		• friends.se
+
+		📞 Mind - för unga med psykisk ohälsa:
+		• Chatt: www.mind.se
+
+		📞 112 - vid akut fara eller hot
+
+		Försök INTE agera terapeut, ge medicinska råd eller lösa sådana problem själv.
+
 		${userAge ? `ANVÄNDARINFORMATION (detta är systemdata, INTE något användaren sa):
 		- Barnets ålder: ${userAge} år
 		- Anpassa ditt språk, förklaringar och exempel efter denna åldersgrupp.` : ''}`
@@ -505,6 +580,77 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
 
     const aiResponse = responseMessage.content;
 
+    // Detektera känsligt innehåll - spara inte meddelanden där AI:n ger hjälpnummer
+    const isSensitiveContent = aiResponse && (
+      aiResponse.includes('116 111') || // BRIS
+      aiResponse.includes('116 123') || // Friends
+      aiResponse.includes('BRIS') ||
+      aiResponse.includes('Friends') ||
+      aiResponse.includes('Mind') 
+    );
+
+    // Detektera "endast läxor/skolarbete"-svar - spara inte dessa heller
+    const isNonSchoolContent = aiResponse && (
+      aiResponse.includes('Jag är här för att hjälpa dig med läxor och skolarbete!')
+    );
+
+    // Spara endast till databas om det INTE är känsligt innehåll eller icke-skolrelaterat
+    if (!isSensitiveContent && !isNonSchoolContent) {
+      const sessionResult = await db.send(new GetCommand({
+        TableName: tableName,
+        Key: {
+          pk,
+          sk: sessionSk
+        }
+      }));
+
+      const startedAt = typeof sessionResult.Item?.startedAt === 'string'
+        ? sessionResult.Item.startedAt
+        : timestamp;
+
+      const subjectValue = subject || (
+        typeof sessionResult.Item?.subject === 'string'
+          ? sessionResult.Item.subject
+          : 'Okänt'
+      );
+
+      await db.send(new PutCommand({
+        TableName: tableName,
+        Item: {
+          pk,
+          sk: sessionSk,
+          startedAt,
+          subject: subjectValue
+        }
+      }));
+
+      // Spara user message
+      await db.send(new PutCommand({
+        TableName: tableName,
+        Item: {
+          pk: pk,
+          sk: `user#${userId}#SESSION#${sessionId}#MSG#${timestamp}`,
+          role: 'user',
+          text: message
+        }
+      }));
+
+      // Spara assistant response
+      const assistantTimestamp = new Date(new Date(timestamp).getTime() + 1000).toISOString();
+      await db.send(new PutCommand({
+        TableName: tableName,
+        Item: {
+          pk: pk,
+          sk: `user#${userId}#SESSION#${sessionId}#MSG#${assistantTimestamp}`,
+          role: 'assistant',
+          text: aiResponse
+        }
+      }));
+    } else {
+      console.log('⚠️ Känsligt innehåll detekterat - meddelanden sparas INTE till databasen');
+    }
+
+    // Hämta session för att uppdatera stats (även för känsliga meddelanden)
     const sessionResult = await db.send(new GetCommand({
       TableName: tableName,
       Key: {
@@ -517,63 +663,27 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
       ? sessionResult.Item.startedAt
       : timestamp;
 
-    const subjectValue = subject || (
-      typeof sessionResult.Item?.subject === 'string'
-        ? sessionResult.Item.subject
-        : 'Okänt'
-    );
-
-    await db.send(new PutCommand({
-      TableName: tableName,
-      Item: {
-        pk,
-        sk: sessionSk,
-        startedAt,
-        subject: subjectValue
-      }
-    }));
-
-    // Spara user message
-    await db.send(new PutCommand({
-      TableName: tableName,
-      Item: {
-        pk: pk,
-        sk: `user#${userId}#SESSION#${sessionId}#MSG#${timestamp}`,
-        role: 'user',
-        text: message
-      }
-    }));
-
-    // Spara assistant response
-    const assistantTimestamp = new Date(new Date(timestamp).getTime() + 1000).toISOString();
-    await db.send(new PutCommand({
-      TableName: tableName,
-      Item: {
-        pk: pk,
-        sk: `user#${userId}#SESSION#${sessionId}#MSG#${assistantTimestamp}`,
-        role: 'assistant',
-        text: aiResponse
-      }
-    }));
-
     const durationMinutes = Math.max(
       0,
       Math.round((new Date(timestamp).getTime() - new Date(startedAt).getTime()) / 60000)
     );
 
-    await db.send(new UpdateCommand({
-      TableName: tableName,
-      Key: {
-        pk,
-        sk: `${sessionSk}#STATS`
-      },
-      UpdateExpression: 'SET durationMinutes = :durationMinutes, quizScore = if_not_exists(quizScore, :quizScore) ADD questionCount :questionIncrement',
-      ExpressionAttributeValues: {
-        ':durationMinutes': durationMinutes,
-        ':quizScore': null,
-        ':questionIncrement': 1
-      }
-    }));
+    // Uppdatera stats endast om det INTE är känsligt innehåll
+    if (!isSensitiveContent) {
+      await db.send(new UpdateCommand({
+        TableName: tableName,
+        Key: {
+          pk,
+          sk: `${sessionSk}#STATS`
+        },
+        UpdateExpression: 'SET durationMinutes = :durationMinutes, quizScore = if_not_exists(quizScore, :quizScore) ADD questionCount :questionIncrement',
+        ExpressionAttributeValues: {
+          ':durationMinutes': durationMinutes,
+          ':quizScore': null,
+          ':questionIncrement': 1
+        }
+      }));
+    }
 
     res.json({ 
       response: aiResponse || 'Oj, jag kunde inte generera ett svar. Försök igen!',
@@ -777,6 +887,30 @@ type ParentMessagesQuery = z.infer<typeof parentMessagesQuerySchema> & {
   [key: string]: string | undefined;
 };
 
+const sessionItemSchema = z.object({
+  sessionId: z.string(),
+  title: z.string()
+});
+
+const sessionsResponseSchema = z.array(sessionItemSchema);
+
+type SessionsResponse = z.infer<typeof sessionsResponseSchema>;
+
+export const sessionsQuerySchema = z.object({
+  familyId: z.preprocess(
+    (value) => (Array.isArray(value) ? value[0] : value),
+    z.string().trim().min(1)
+  ),
+  userId: z.preprocess(
+    (value) => (Array.isArray(value) ? value[0] : value),
+    z.string().trim().min(1)
+  )
+});
+
+type SessionsQuery = z.infer<typeof sessionsQuerySchema> & {
+  [key: string]: string | undefined;
+};
+
 
 
 // Parent endpoint, hämta alla meddelanden i ett barns session
@@ -899,15 +1033,26 @@ try {
 });
 
 //Get endpoint-hämta tidigare sessioner med första orden av första meddelandet
-router.get('/sessions', async (req, res) => {
+router.get('/sessions', async (req: Request<{}, SessionsResponse | ErrorMessage, {}, SessionsQuery>, res: Response<SessionsResponse | ErrorMessage>) => {
   try {
 
-    //hämtar familyId och userId från req eury
-    const { familyId, userId } = req.query;
-
-    if (!familyId || !userId) {
-      return res.status(400).json({ error: 'familyId och userId krävs' });
+    const payload = requireAuth(req, res);
+    if (!payload) {
+      return;
     }
+
+    const parsedQuery = sessionsQuerySchema.safeParse(req.query);
+    if (!parsedQuery.success) {
+      return res.status(400).json({ error: 'Invalid request query' });
+    }
+
+    //hämtar familyId och userId från req query
+    const { familyId, userId } = parsedQuery.data;
+
+    if (!requireSameUser(payload, userId, familyId, res)) {
+      return;
+    }
+
     //bygger nycklar
     const pk = `family#${familyId}`;
     const skPrefix = `user#${userId}#SESSION#`;
@@ -965,10 +1110,10 @@ router.get('/sessions', async (req, res) => {
       .sort((a, b) => a.sessionId.localeCompare(b.sessionId));
 
     console.log('Returning sessions:', sessions);
-    res.json(sessions);
+    res.json(sessionsResponseSchema.parse(sessions));
   } catch (error) {
     console.error('Get sessions error:', error);
-    res.status(500).json({ error: 'Kunde inte hämta sessioner', details: String(error) });
+    res.status(500).json({ error: 'Kunde inte hämta sessioner' });
   }
 });
 

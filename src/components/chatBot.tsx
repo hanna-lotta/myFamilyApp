@@ -530,7 +530,8 @@ useEffect(() => {
           familyId: authParams.familyId,
           userId: authParams.userId,
           sessionId,
-          quizScore
+          quizScore,
+          questionCount
         })
       });
     } catch (error) {

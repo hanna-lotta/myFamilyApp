@@ -1,3 +1,25 @@
+/* Close session button styled like navlinks: transparent, white text, border, rounded, hover effect */
+.close-session-btn {
+  text-decoration: none;
+  color: var(--text, #fff);
+  padding: 0.75rem 1.5rem;
+  border-radius: 16px;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--stroke2, rgba(255,255,255,.5));
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  cursor: pointer;
+  margin-left: 1rem;
+}
+.close-session-btn:hover, .close-session-btn:focus {
+  background: rgba(255,255,255,.12);
+  border-color: rgba(255,255,255,.2);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.2);
+  outline: none;
+}
 .parent-view {
   display: flex;
   flex-direction: column;
@@ -158,6 +180,88 @@
   color: rgba(255, 255, 255, 0.6);
 }
 
+.session-title-btn {
+  background: transparent;
+  border: none;
+  color: var(--accent3);
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.session-title-btn:hover {
+  text-decoration: underline;
+}
+
+.session-detail {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.session-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.session-detail-header h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.session-detail-header span {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.85rem;
+}
+
+.session-detail-status {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.session-detail-status.error {
+  color: rgba(255, 122, 122, 0.95);
+}
+
+.session-detail-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.session-detail-message {
+  border: 1px solid var(--stroke2);
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.session-detail-message.user {
+  background: rgba(124, 58, 237, 0.2);
+}
+
+.session-detail-message.assistant {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.session-detail-role {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 0.2rem;
+}
+
+.session-detail-message p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 720px) {
   .daily-row {
     grid-template-columns: 1fr;
@@ -172,4 +276,27 @@
     grid-template-columns: repeat(2, 1fr);
     row-gap: 0.3rem;
   }
+}
+
+/* Footer styling */
+.parent-footer {
+	width: 100%;
+	padding: 2rem;
+	border-top: 2px solid var(--accent1);
+	background: linear-gradient(135deg, rgba(124,58,237,.95), rgba(56,189,248,.65));
+	backdrop-filter: blur(20px);
+	-webkit-backdrop-filter: blur(20px);
+	text-align: center;
+	animation: slideUpIn 0.4s ease-out;
+}
+
+@keyframes slideUpIn {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
