@@ -1,6 +1,6 @@
 import express from 'express';
 import type { Request, Response } from 'express';
-import { QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { validateJwt } from '../data/auth.js';
 import type { ErrorMessage } from '../data/types.js';
 import { db, tableName } from '../data/dynamoDb.js';
@@ -22,7 +22,9 @@ type DailyStat = {
 };
 
 type SessionSummary = {
+  childUserId: string;
   sessionId: string;
+  title: string;
   startedAt: string;
   subject: string;
   durationMinutes: number;
@@ -32,6 +34,7 @@ type SessionSummary = {
 
 type OverviewResponse = {
   overview: ParentOverview;
+  childUsername: string | null;
   dailyStats: DailyStat[];
   recentSessions: SessionSummary[];
 };
@@ -83,8 +86,12 @@ router.get('/overview', async (req: Request, res: Response<OverviewResponse | Er
     subject?: string;
     firstMsgAt?: string;
     lastMsgAt?: string;
+    firstUserMsgAt?: string;
+    firstUserMessage?: string;
     questionCount: number;
   }>();
+
+  const childUsernames = new Map<string, string>();
 
   const stats = new Map<string, {
     durationMinutes?: number;
@@ -115,9 +122,19 @@ router.get('/overview', async (req: Request, res: Response<OverviewResponse | Er
       if (!item || typeof item.sk !== 'string') continue;
 
       const sk: string = item.sk;
+      const userMatch = sk.match(/^user#([^#]+)$/);
       const sessionMatch = sk.match(/^user#([^#]+)#SESSION#([^#]+)$/);
       const statsMatch = sk.match(/^user#([^#]+)#SESSION#([^#]+)#STATS$/);
       const msgMatch = sk.match(/^user#([^#]+)#SESSION#([^#]+)#MSG#(.+)$/);
+
+      if (userMatch && userMatch[1]) {
+        const userId = userMatch[1];
+        const role = typeof item.role === 'string' ? item.role : '';
+        if (role === 'child' && typeof item.username === 'string') {
+          childUsernames.set(userId, item.username);
+        }
+        continue;
+      }
 
       if (sessionMatch && sessionMatch[1] && sessionMatch[2]) {
         const userId = sessionMatch[1];
@@ -177,12 +194,21 @@ router.get('/overview', async (req: Request, res: Response<OverviewResponse | Er
         const role = typeof item.role === 'string' ? item.role : '';
         const isUserMessage = role === 'user';
 
-        sessions.set(key, {
+        const updatedSession = {
           ...existing,
           firstMsgAt: existing.firstMsgAt && existing.firstMsgAt < timestamp ? existing.firstMsgAt : timestamp,
           lastMsgAt: existing.lastMsgAt && existing.lastMsgAt > timestamp ? existing.lastMsgAt : timestamp,
           questionCount: existing.questionCount + (isUserMessage ? 1 : 0)
-        });
+        };
+
+        if (isUserMessage && (!existing.firstUserMsgAt || timestamp < existing.firstUserMsgAt)) {
+          updatedSession.firstUserMsgAt = timestamp;
+          if (typeof item.text === 'string') {
+            updatedSession.firstUserMessage = item.text;
+          }
+        }
+
+        sessions.set(key, updatedSession);
       }
     }
 
@@ -209,8 +235,15 @@ router.get('/overview', async (req: Request, res: Response<OverviewResponse | Er
       ? stat.questionCount
       : session.questionCount;
 
+    const title = (session.firstUserMessage || 'Konversation')
+      .split(/[\s.!?]+/)
+      .slice(0, 5)
+      .join(' ');
+
     sessionSummaries.push({
+      childUserId: session.userId,
       sessionId: session.sessionId,
+      title,
       startedAt: startDate.toISOString(),
       subject: session.subject || 'Okänt',
       durationMinutes,
@@ -220,6 +253,30 @@ router.get('/overview', async (req: Request, res: Response<OverviewResponse | Er
   }
 
   sessionSummaries.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+
+  if (childId && !childUsernames.has(childId)) {
+    const childItem = await db.send(new GetCommand({
+      TableName: tableName,
+      Key: {
+        pk,
+        sk: `user#${childId}`
+      }
+    }));
+
+    if (childItem.Item && typeof childItem.Item.username === 'string') {
+      childUsernames.set(childId, childItem.Item.username);
+    }
+  }
+
+  let childUsername: string | null = null;
+  if (childId) {
+    childUsername = childUsernames.get(childId) || null;
+  } else if (sessionSummaries.length > 0 && sessionSummaries[0]) {
+    childUsername = childUsernames.get(sessionSummaries[0].childUserId) || null;
+  } else {
+    const firstChild = childUsernames.values().next();
+    childUsername = firstChild.done ? null : firstChild.value;
+  }
 
   const dailyMap = new Map<string, { minutes: number; questionCount: number; quizScores: number[] }>();
   let totalMinutes = 0;
@@ -278,6 +335,7 @@ router.get('/overview', async (req: Request, res: Response<OverviewResponse | Er
       topSubject,
       sessionsCount: sessionSummaries.length
     },
+    childUsername,
     dailyStats,
     recentSessions: sessionSummaries.slice(0, 6)
   });

@@ -87,7 +87,10 @@
 .message-content p {
   margin: 0 0 8px 0;
   line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
+
 
 .message-content p:last-child {
   margin-bottom: 0;
