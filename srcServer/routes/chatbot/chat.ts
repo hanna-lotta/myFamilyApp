@@ -562,8 +562,13 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
       aiResponse.includes('Mind') 
     );
 
-    // Spara endast till databas om det INTE är känsligt innehåll
-    if (!isSensitiveContent) {
+    // Detektera "endast läxor/skolarbete"-svar - spara inte dessa heller
+    const isNonSchoolContent = aiResponse && (
+      aiResponse.includes('Jag är här för att hjälpa dig med läxor och skolarbete!')
+    );
+
+    // Spara endast till databas om det INTE är känsligt innehåll eller icke-skolrelaterat
+    if (!isSensitiveContent && !isNonSchoolContent) {
       const sessionResult = await db.send(new GetCommand({
         TableName: tableName,
         Key: {
