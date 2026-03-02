@@ -8,7 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCamera, faPaperPlane, faTrashCan } from '@fortawesome/free-solid-svg-icons';
 import { getAuthHeader } from '../utils/auth';
 import { useLocation } from 'react-router';
-import { Message } from '../types/types';
+import type { Message } from '../types/types';
 import { getAuthParams } from '../utils/authHelper';
 import {useChatHistory} from '../hooks/useChatHistory.ts';
 import { handleDeleteMessage } from '../hooks/useChatActions';
