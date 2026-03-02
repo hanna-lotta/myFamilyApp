@@ -457,7 +457,7 @@
   background: rgba(255,255,255,.05);
   border: 1px solid var(--stroke2);
   color: var(--text);
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-family: inherit;
   resize: none;
   outline: none;

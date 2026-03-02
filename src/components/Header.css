@@ -1,13 +1,3 @@
-/* Dölj mobilmeny-länkar på desktop */
-.mobile-only {
-  display: block;
-}
-
-@media (min-width: 769px) {
-  .mobile-only {
-    display: none !important;
-  }
-}
 .nav {
   width: 100%;
   padding: 0;
@@ -186,4 +176,13 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+.mobile-only {
+  display: block;
+}
+
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none !important;
+  }
 }
