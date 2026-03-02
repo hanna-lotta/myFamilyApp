@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from 'react';
 import { getAuthHeader } from '../utils/auth';
 import './ParentView.css';
@@ -7,7 +6,7 @@ type ParentOverview = {
 	totalMinutes: number;
 	questionCount: number;
 	avgQuizScore: number | null;
-	topSubject: string | null;
+	// topSubject: string | null; (borttagen)
 	sessionsCount: number;
 };
 
@@ -23,7 +22,7 @@ type SessionSummary = {
 	sessionId: string;
 	title: string;
 	startedAt: string;
-	subject: string;
+	// subject: string; (borttagen)
 	durationMinutes: number;
 	questionCount: number;
 	quizScore: number | null;
@@ -163,11 +162,7 @@ const ParentView = () => {
 					<p>{overview?.avgQuizScore ?? '-'}%</p>
 					<span>Genomsnittlig poäng</span>
 				</div>
-				<div className="summary-card">
-					<h3>Ämne</h3>
-					<p>{overview?.topSubject ?? '—'}</p>
-					<span>Mest tränat ämne</span>
-				</div>
+				{/* Ämne / Mest tränat ämne borttagen */}
 			</div>
 
 			<div className="panel">
@@ -194,7 +189,7 @@ const ParentView = () => {
 					<div className="session-row session-header">
 						<span>Rubrik</span>
 						<span>Datum</span>
-						<span>Ämne</span>
+						{/* Ämne borttagen */}
 						<span>Tid</span>
 						<span>Frågor</span>
 						<span>Quiz</span>
@@ -211,7 +206,7 @@ const ParentView = () => {
 								</button>
 							</span>
 							<span>{new Date(session.startedAt).toLocaleDateString('sv-SE')}</span>
-							<span>{session.subject}</span>
+							{/* session.subject borttagen */}
 							<span>{session.durationMinutes} min</span>
 							<span>{session.questionCount}</span>
 							<span>{session.quizScore ?? '—'}%</span>
@@ -260,7 +255,16 @@ const ParentView = () => {
 			<footer className="parent-footer">
 				<p style={{ color: 'rgba(255,255,255,.92)', fontSize: '0.95rem', margin: '0 0 0.5rem 0' }}>Följ oss på sociala medier</p>
 				<div style={{ width: '40px', height: '2px', background: 'linear-gradient(90deg, transparent, var(--accent1), transparent)', margin: '0.5rem auto' }}></div>
-				<a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent3)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: '500' }}>LinkedIn</a>
+				<div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center' }}>
+					<a href="https://www.linkedin.com/in/sara-serti" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent3)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+						<img src="/images/linkedin_2504923.png" alt="LinkedIn Sara Serti" style={{ width: '20px', height: '20px', marginRight: '0.5rem' }} />
+						Sara Serti
+					</a>
+					<a href="https://www.linkedin.com/in/hanna-seld%C3%A9n-821a3a62/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent3)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+						<img src="/images/linkedin_2504923.png" alt="LinkedIn Hanna Seldén" style={{ width: '20px', height: '20px', marginRight: '0.5rem' }} />
+						Hanna Seldén
+					</a>
+				</div>
 			</footer>
 		</div>
 		</>
