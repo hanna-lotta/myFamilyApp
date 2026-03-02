@@ -5,16 +5,17 @@ import { SpeakButton } from './SpeakButton';
 import { SpeechToTextButton } from './SpeechToTextButton';
 import { QuizControl } from './QuizControl';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCamera, faPaperPlane, faTrashCan } from '@fortawesome/free-solid-svg-icons';
+import { faTrashCan } from '@fortawesome/free-solid-svg-icons';
 import { getAuthHeader } from '../utils/auth';
 import { useLocation } from 'react-router';
-import { Message } from '../types/types';
+import type { Message } from '../types/types';
 import { getAuthParams } from '../utils/authHelper';
 import {useChatHistory} from '../hooks/useChatHistory.ts';
 import { handleDeleteMessage } from '../hooks/useChatActions';
 import { useOcr } from '../hooks/useOcr';
 import { PlusButton } from './PlusButton';
 import EmojiPicker from 'emoji-picker-react';
+import sendIcon from '../assets/sendIcon.png'
 
 
 export const ChatBot: React.FC = () => {
@@ -29,7 +30,6 @@ export const ChatBot: React.FC = () => {
     ocrText,
     setOcrText,
     isOcrProcessing,
-    setIsOcrProcessing,
     showOcrEditor,
     setShowOcrEditor,
     performOCR
@@ -526,7 +526,7 @@ export const ChatBot: React.FC = () => {
         value={inputText}
         onChange={(e) => setInputText(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Skriv din fråga här..."
+        // placeholder="Skriv din fråga här..."
         className="chat-input"
         rows={2}
         disabled={isLoading}
@@ -564,7 +564,7 @@ export const ChatBot: React.FC = () => {
         disabled={(!inputText.trim() && !selectedImage) || isLoading}
         className="send-button"
         >
-        <FontAwesomeIcon icon={faPaperPlane} />
+        <img src={sendIcon} alt="Skicka" className="send-icon" />
         </button>
         </div>
         </div>
