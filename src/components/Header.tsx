@@ -129,8 +129,9 @@ const Header = () => {
       {/* Mobile menu */}
       {isMenuOpen && (
         <div className="dropdown-menu mobile-menu" ref={menuRef}>
-          <NavLink to="/my-profile" onClick={() => setIsMenuOpen(false)}>Profil</NavLink>
-          <NavLink to="/chat" onClick={() => setIsMenuOpen(false)}>Chat</NavLink>
+          {/* Visa Chat och Profil endast på mobil */}
+          <NavLink to="/my-profile" onClick={() => setIsMenuOpen(false)} className="mobile-only">Profil</NavLink>
+          <NavLink to="/chat" onClick={() => setIsMenuOpen(false)} className="mobile-only">Chat</NavLink>
 
           {username && (
             <>
@@ -148,7 +149,7 @@ const Header = () => {
             </>
           )}
           {!username && (
-            <NavLink to="/" onClick={() => setIsMenuOpen(false)}>Logga in</NavLink>
+            <NavLink to="/" onClick={() => setIsMenuOpen(false)} className="mobile-only">Logga in</NavLink>
           )}
         </div>
       )}
