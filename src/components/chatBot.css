@@ -525,6 +525,7 @@
 .chat-frame {
   display: flex;
   justify-content: space-between;
+  padding: 0.8rem;
 
     h2 {
       font-size: 1.5rem;
