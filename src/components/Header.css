@@ -1,3 +1,13 @@
+/* Dölj mobilmeny-länkar på desktop */
+.mobile-only {
+  display: block;
+}
+
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
 .nav {
   width: 100%;
   padding: 0;
@@ -131,26 +141,6 @@
   background: rgba(251,113,133,.15);
 }
 
-.color-picker {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: rgba(0,0,0,.15);
-}
-
-.color-option {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.color-option:hover {
-  transform: scale(1.1);
-}
-
 .appName {
   font-size: 1.5rem;
   font-weight: 300;
@@ -181,7 +171,7 @@
 }
 
 .mobile-menu {
-position: absolute;
+  position: absolute;
   top: 65px;
   right: 10px;
   background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
