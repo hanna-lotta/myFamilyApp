@@ -7,8 +7,8 @@ export function createToken(userId: string, username: string, role: 'parent' | '
 	// Tiden sedan 1970-01-01 i sekunder
 	const now = Math.floor(Date.now() / 1000)
 
-	// En timme
-	const defaultExpiration: number = now + 60 * 60
+	// Ett dygn
+	const defaultExpiration: number = now + 60 * 60 * 24
 	return jwt.sign({
 		userId: userId,
 		username: username,
