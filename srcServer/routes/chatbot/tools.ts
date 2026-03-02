@@ -4,10 +4,13 @@ import wiki from 'wikipedia'; // Wikipedia API
 import multer from 'multer'; // För bilduppladdning
 import type { OpenAI } from 'openai';
 
-// Initiera DeepL translator (om API-nyckel finns)
-const translator = process.env.DEEPL_API_KEY 
-  ? new deepl.Translator(process.env.DEEPL_API_KEY)
-  : null;
+// Typdeklaration för globalThis.openai för att undvika TypeScript-fel
+declare global {
+  // Minimalt interface för det som används
+  var openai: {
+    createChatCompletion: (args: any) => Promise<any>;
+  } | undefined;
+}
 
 // Alias för wikipedia
 const wikipedia = wiki;
@@ -28,33 +31,6 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           }
         },
         required: ["expression"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "translate",
-      description: "Översätt text mellan svenska och engelska",
-      parameters: {
-        type: "object",
-        properties: {
-          text: {
-            type: "string",
-            description: "Text att översätta"
-          },
-          from_language: {
-            type: "string",
-            enum: ["svenska", "engelska"],
-            description: "Språk att översätta från"
-          },
-          to_language: {
-            type: "string",
-            enum: ["svenska", "engelska"],
-            description: "Språk att översätta till"
-          }
-        },
-        required: ["text", "from_language", "to_language"]
       }
     }
   },
@@ -98,11 +74,7 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     }
   }
 ];
-/**Färdiga verktyg:
-Kalkylator - Exakta matematiska beräkningar (mathjs)
-Översättare - Professionella översättningar (DeepL) 
-Wikipedia-sökning - Faktainformation från svenska Wikipedia 
-Stavningskontroll - Grundläggande stavningskontroll */
+
 
 // Tool-implementationer
 async function executeTool(toolName: string, args: any): Promise<string> {
@@ -115,23 +87,27 @@ async function executeTool(toolName: string, args: any): Promise<string> {
         return `Kunde inte beräkna uttrycket "${args.expression}". Kontrollera att det är ett giltigt matematiskt uttryck.`;
       }
 
-    case "translate":
-      if (!translator) {
-        return `Översättning från ${args.from_language} till ${args.to_language}: "${args.text}" (DeepL ej konfigurerad)`;
+    case "check_spelling": {
+      // Låt AI-modellen själv föreslå rätt stavning och feedback
+      // Prompten är på svenska och anpassad för barn
+      const prompt = `Du är en snäll svensklärare för barn. Kontrollera stavningen på ordet "${args.word}". Om det är felstavat, ge en vänlig förklaring och rätt stavning. Om det är rätt, beröm barnet.`;
+      // Här används OpenAI:s API direkt om det finns tillgängligt i din miljö
+      if (typeof globalThis.openai === 'object' && globalThis.openai.createChatCompletion) {
+        const completion = await globalThis.openai.createChatCompletion({
+          model: 'gpt-4',
+          messages: [
+            { role: 'system', content: 'Du är en hjälpsam svensklärare för barn.' },
+            { role: 'user', content: prompt }
+          ],
+          max_tokens: 60,
+          temperature: 0.2
+        });
+        return completion.choices?.[0]?.message?.content || `Jag kunde inte kontrollera stavningen just nu.`;
+      } else {
+        // Fallback om ingen AI-modell finns tillgänglig
+        return `Jag kan inte kontrollera stavningen just nu, men AI:n kan ofta hjälpa till om du frågar direkt i chatten!`;
       }
-      try {
-        const sourceLang = args.from_language === 'svenska' ? 'sv' : 'en';
-        const targetLang = args.to_language === 'svenska' ? 'sv' : 'en';
-        const result = await translator.translateText(args.text, sourceLang, targetLang as deepl.TargetLanguageCode);
-        const translatedText = Array.isArray(result) ? result[0]?.text : result.text;
-        return `Översättning: "${translatedText || args.text}"`;
-      } catch (error) {
-        return `Kunde inte översätta texten. Försök igen.`;
-      }
-
-    case "check_spelling":
-      // Enkel stavningskontroll - i produktion kan du använda ett rättstavnings-API
-      return `Stavningskontroll för ordet "${args.word}"`;
+    }
 
     case "search_information":
       try {
