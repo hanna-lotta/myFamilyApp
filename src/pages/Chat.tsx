@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faTrash} from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router';
 import useClickOutside from '../hooks/useClickOutside';
-import type { Session, Message, JwtPayload } from '../types/types'; 
+import type { Session, JwtPayload } from '../types/types'; 
 import { getAuthHeader } from '../utils/auth';
 import { handleDeleteSession } from '../hooks/useChatActions';
 

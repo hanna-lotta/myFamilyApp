@@ -1,7 +1,8 @@
 
 import { getAuthParams } from '../utils/authHelper';
 import { getAuthHeader } from '../utils/auth';
-import { Message } from '../types/types';
+import type { Message, Session } from '../types/types';
+
 
 export async function handleDeleteMessage(
   messageId: string,
@@ -35,7 +36,7 @@ export async function handleDeleteMessage(
   }
 }
 
-import { Session } from '../types/types';
+
 
 export async function handleDeleteSession(
   sessionId: string,
