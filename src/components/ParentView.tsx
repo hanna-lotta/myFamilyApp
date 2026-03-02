@@ -256,7 +256,7 @@ const ParentView = () => {
 				<p style={{ color: 'rgba(255,255,255,.92)', fontSize: '0.95rem', margin: '0 0 0.5rem 0' }}>Följ oss på sociala medier</p>
 				<div style={{ width: '40px', height: '2px', background: 'linear-gradient(90deg, transparent, var(--accent1), transparent)', margin: '0.5rem auto' }}></div>
 				<div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center' }}>
-					<a href="https://www.linkedin.com/in/sara-serti" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent3)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+					<a href="https://www.linkedin.com/in/sara-serti-b8b25932b/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent3)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
 						<img src="/images/linkedin_2504923.png" alt="LinkedIn Sara Serti" style={{ width: '20px', height: '20px', marginRight: '0.5rem' }} />
 						Sara Serti
 					</a>
