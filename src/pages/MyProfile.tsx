@@ -1,94 +1,167 @@
-import { useNavigate } from 'react-router'
-import useUserStore from '../store/userStore'
-import '../App.css'
+import { useEffect, useState } from 'react';
+import useUserStore from '../store/userStore';
+import '../components/ParentView.css';
+import { useNavigate } from 'react-router';
+import { getAuthHeader } from '../utils/auth';
+
+// Typ för stats (kan utökas om backend returnerar mer)
+type UserStats = {
+  totalMinutes: number;
+  questionCount: number;
+  avgQuizScore: number | null;
+};
 
 const MyProfile = () => {
-  const user = useUserStore((s) => s.user)
-  const logout = useUserStore((s) => s.logout)
-  const navigate = useNavigate()
+  const user = useUserStore((s) => s.user);
+  const navigate = useNavigate();
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [dailyStats, setDailyStats] = useState<{ date: string; minutes: number; questionCount: number }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [todoInput, setTodoInput] = useState('');
+  const [todos, setTodos] = useState<string[]>(() => {
+    // Ladda från localStorage om det finns
+    const saved = localStorage.getItem('myprofile_todos');
+    return saved ? JSON.parse(saved) : [];
+  });
 
-  const handleLogout = () => {
-    logout()
-    navigate('/')
-  }
+  // Redirect om inte inloggad
+  useEffect(() => {
+    if (!user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const authHeader = getAuthHeader();
+        const res = await fetch('/api/user/stats', {
+          headers: authHeader ? { Authorization: authHeader } : {}
+        });
+        if (!res.ok) throw new Error('Kunde inte hämta statistik.');
+        const data = await res.json();
+        setStats(data);
+        // Om backend returnerar dailyStats, spara det
+        if (data.dailyStats) setDailyStats(data.dailyStats);
+      } catch (err) {
+        setError('Kunde inte hämta statistik.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const addTodo = () => {
+    if (todoInput.trim()) {
+      const updated = [...todos, todoInput.trim()];
+      setTodos(updated);
+      localStorage.setItem('myprofile_todos', JSON.stringify(updated));
+      setTodoInput('');
+    }
+  };
+
+  const removeTodo = (idx: number) => {
+    const updated = todos.filter((_, i) => i !== idx);
+    setTodos(updated);
+    localStorage.setItem('myprofile_todos', JSON.stringify(updated));
+  };
 
   if (!user) {
-    navigate('/')
-    return null
+    // Navigera bort först när komponenten är "säker" att rendera, inte direkt i render
+    useEffect(() => {
+      navigate('/');
+    }, [navigate]);
+    return null;
   }
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column',
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      minHeight: '100dvh',
-      padding: '2rem'
-    }}>
-      <div style={{
-        maxWidth: '600px',
-        width: '100%',
-        background: 'linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06))',
-        border: '1px solid rgba(255,255,255,.14)',
-        boxShadow: '0 12px 28px rgba(0,0,0,.45)',
-        backdropFilter: 'blur(14px)',
-        borderRadius: '22px',
-        padding: '2rem',
-        textAlign: 'center'
-      }}>
-        <h1 style={{ 
-          fontSize: '2rem', 
-          marginBottom: '1rem',
-          color: 'rgba(255,255,255,.92)'
-        }}>
-          Min Profil
-        </h1>
-        <p style={{ 
-          fontSize: '1.2rem', 
-          marginBottom: '2rem',
-          color: 'rgba(255,255,255,.70)'
-        }}>
-          Välkommen, <strong>{user.username}</strong>!
-        </p>
-        {user.color && (
-          <div style={{
-            width: '60px',
-            height: '60px',
-            borderRadius: '50%',
-            backgroundColor: user.color,
-            margin: '0 auto 2rem',
-            border: '2px solid rgba(255,255,255,.2)'
-          }} />
-        )}
-        <button
-          onClick={handleLogout}
-          style={{
-            padding: '0.75rem 2rem',
-            borderRadius: '16px',
-            fontSize: '1rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            background: 'rgba(255,255,255,.08)',
-            border: '1px solid rgba(255,255,255,.14)',
-            boxShadow: '0 10px 22px rgba(0,0,0,.25)',
-            color: 'rgba(255,255,255,.92)',
-            transition: 'all 0.15s ease'
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,.10)'
-            e.currentTarget.style.transform = 'translateY(-1px)'
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,.08)'
-            e.currentTarget.style.transform = 'translateY(0)'
-          }}
-        >
-          Logga ut
-        </button>
+    <div className="parent-view" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+      <div className="parent-header">
+        <div>
+          <h2 className="parent-subtitle">Välkommen, <strong>{user.username}</strong>!</h2>
+        </div>
+      </div>
+      {loading && <span className="status">Laddar statistik...</span>}
+      {error && <span className="status error">{error}</span>}
+      {stats && (
+        <div className="summary-grid" style={{ maxWidth: 600, margin: '2rem auto 1.5rem' }}>
+          <div className="summary-card">
+            <h3>Studietid</h3>
+            <p>{stats.totalMinutes ?? 0} min</p>
+            <span>Totalt</span>
+          </div>
+          <div className="summary-card">
+            <h3>Frågor</h3>
+            <p>{stats.questionCount ?? 0}</p>
+            <span>Antal ställda frågor</span>
+          </div>
+          <div className="summary-card">
+            <h3>Quiz</h3>
+            <p>{stats.avgQuizScore ?? '-'}%</p>
+            <span>Genomsnittlig poäng</span>
+          </div>
+        </div>
+      )}
+      {dailyStats.length > 0 && (
+        <div className="panel" style={{ maxWidth: 600, width: '100%', margin: '0 auto 1.5rem' }}>
+          <h3>Studietid per dag</h3>
+          <div className="daily-stats">
+            {dailyStats.map((day) => (
+              <div key={day.date} className="daily-row">
+                <span className="daily-date">{day.date}</span>
+                <div className="daily-bar">
+                  <div
+                    className="daily-fill"
+                    style={{ width: `${Math.round((day.minutes / Math.max(...dailyStats.map(d => d.minutes), 1)) * 100)}%` }}
+                  />
+                </div>
+                <span className="daily-meta">{day.minutes} min • {day.questionCount} frågor</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* ToDo-lista */}
+      <div className="panel" style={{ maxWidth: 600, width: '100%', margin: '0 auto 2rem' }}>
+        <h3>Att göra </h3>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+          <input
+            type="text"
+            value={todoInput}
+            onChange={e => setTodoInput(e.target.value)}
+            placeholder='Matteprov fredag'
+            style={{
+              flex: 1,
+              borderRadius: 8,
+              border: '1px solid var(--stroke2)',
+              padding: '0.5rem',
+              background: 'rgba(255,255,255,.05)', 
+              color: 'var(--text, #fff)',
+              outline: 'none',
+              fontSize: '1rem'
+            }}
+            onKeyDown={e => { if (e.key === 'Enter') addTodo(); }}
+          />
+          <button className="close-session-btn" style={{ minWidth: 80 }} onClick={addTodo}>Lägg till</button>
+        </div>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          {todos.length === 0 && <li style={{ color: 'rgba(255,255,255,.7)' }}>Inga att göra ännu.</li>}
+          {todos.map((todo, idx) => (
+            <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: 6 }}>
+              <span style={{ flex: 1 }}>{todo}</span>
+              <button className="close-session-btn" style={{ padding: '0.2rem 0.8rem', fontSize: '0.9rem' }} onClick={() => removeTodo(idx)}>
+                Ta bort
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default MyProfile
+export default MyProfile;
