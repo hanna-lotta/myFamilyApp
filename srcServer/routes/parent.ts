@@ -10,7 +10,7 @@ type ParentOverview = {
   totalMinutes: number;
   questionCount: number;
   avgQuizScore: number | null;
-  topSubject: string | null;
+  // topSubject: string | null; (borttagen)
   sessionsCount: number;
 };
 
@@ -26,7 +26,6 @@ type SessionSummary = {
   sessionId: string;
   title: string;
   startedAt: string;
-  subject: string;
   durationMinutes: number;
   questionCount: number;
   quizScore: number | null;
@@ -83,7 +82,6 @@ router.get('/overview', async (req: Request, res: Response<OverviewResponse | Er
     userId: string;
     sessionId: string;
     startedAt?: string;
-    subject?: string;
     firstMsgAt?: string;
     lastMsgAt?: string;
     firstUserMsgAt?: string;
@@ -151,9 +149,7 @@ router.get('/overview', async (req: Request, res: Response<OverviewResponse | Er
         if (typeof item.startedAt === 'string') {
           updated.startedAt = item.startedAt;
         }
-        if (typeof item.subject === 'string') {
-          updated.subject = item.subject;
-        }
+        // ...existing code...
         sessions.set(key, updated);
         continue;
       }
@@ -245,7 +241,6 @@ router.get('/overview', async (req: Request, res: Response<OverviewResponse | Er
       sessionId: session.sessionId,
       title,
       startedAt: startDate.toISOString(),
-      subject: session.subject || 'Okänt',
       durationMinutes,
       questionCount,
       quizScore: typeof stat?.quizScore === 'number' ? stat.quizScore : null
@@ -282,7 +277,7 @@ router.get('/overview', async (req: Request, res: Response<OverviewResponse | Er
   let totalMinutes = 0;
   let totalQuestions = 0;
   const quizScores: number[] = [];
-  const subjectCounts = new Map<string, number>();
+  
 
   for (const session of sessionSummaries) {
     const dateKey = session.startedAt.slice(0, 10);
@@ -297,10 +292,6 @@ router.get('/overview', async (req: Request, res: Response<OverviewResponse | Er
 
     totalMinutes += session.durationMinutes;
     totalQuestions += session.questionCount;
-
-    if (session.subject) {
-      subjectCounts.set(session.subject, (subjectCounts.get(session.subject) || 0) + 1);
-    }
   }
 
   const dailyStats: DailyStat[] = Array.from(dailyMap.entries())
@@ -318,21 +309,11 @@ router.get('/overview', async (req: Request, res: Response<OverviewResponse | Er
     ? Math.round(quizScores.reduce((sum, score) => sum + score, 0) / quizScores.length)
     : null;
 
-  let topSubject: string | null = null;
-  let maxSubjectCount = 0;
-  for (const [subject, count] of subjectCounts.entries()) {
-    if (count > maxSubjectCount) {
-      maxSubjectCount = count;
-      topSubject = subject;
-    }
-  }
-
   res.json({
     overview: {
       totalMinutes,
       questionCount: totalQuestions,
       avgQuizScore,
-      topSubject,
       sessionsCount: sessionSummaries.length
     },
     childUsername,
