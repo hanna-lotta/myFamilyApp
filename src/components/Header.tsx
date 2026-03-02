@@ -4,7 +4,7 @@ import './Header.css';
 import { useState, useRef, useEffect } from 'react';
 import { getAuthHeader, decodeJwt } from '../utils/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBars, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faBars } from '@fortawesome/free-solid-svg-icons';
 
 
 const Header = () => {
@@ -119,7 +119,7 @@ const Header = () => {
 
         {/* Hamburger icon for mobile */}
         <FontAwesomeIcon
-          icon={isMenuOpen ? faXmark : faBars}
+          icon={faBars}
           className="menu-icon"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
         />
