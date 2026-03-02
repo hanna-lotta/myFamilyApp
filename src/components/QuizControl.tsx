@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuiz } from '../hooks/useQuiz';
 import type { QuizQuestion } from '../hooks/useQuiz';
 
+
 type QuizControlRenderProps = {
   isQuizMode: boolean;
   setIsQuizMode: (v: boolean) => void;
@@ -42,6 +43,7 @@ export const QuizControl: React.FC<QuizControlProps> = ({
     isLoading,
     lastUserMessage
   });
+
 
   return (
     <>

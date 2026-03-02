@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChatBot } from '../components/chatBot';
 import './Chat.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faTrash} from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router';
 import useClickOutside from '../hooks/useClickOutside';
 import type { Session, Message, JwtPayload } from '../types/types'; 
 import { getAuthHeader } from '../utils/auth';
+import { handleDeleteSession } from '../hooks/useChatActions';
 
 
 
@@ -46,13 +47,14 @@ export const Chat: React.FC = () => {
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
-   const [messages, setMessages] = useState<Message[]>([]);
+  //  const [messages, setMessages] = useState<Message[]>([]);
+
 
   // Använd samma session per dag istället för ny vid varje reload
-    const [sessionId] = useState(() => {
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      return `session_${today}`;
-    });
+    // const [sessionId] = useState(() => {
+    //   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    //   return `session_${today}`;
+    // });
 
   //hämtar tidigare konversationer 
   useEffect(() => {
@@ -123,40 +125,11 @@ export const Chat: React.FC = () => {
   }, isSessionsVisible);
 
   const handleSessionSelect = (sessionId: string) => {
+    console.log('hämtar vald session', sessionId);
     navigate('/chat', { state: { loadSessionId: sessionId } });
     setIsSessionsOpen(false);
   };
 
-  //radera hel chat session
-  
-  //visar bekräftelseruta, klickarman på avbryt så avslutas funkt.
-    const handleDeleteSession = async (sessionIdToDelete: string) => {
-      if (!window.confirm('Är du säker? Det går inte att ångra. Alla meddelanden i denna session kommer att raderas.')) {
-        return;
-      }
-  
-      const authParams = getAuthParams();
-      if (!authParams) return;
-      const authHeader = getAuthHeader();
-  
-      try {
-        const response = await fetch(
-          `/api/chat/session?familyId=${authParams.familyId}&userId=${authParams.userId}&sessionId=${sessionIdToDelete}`,
-          {
-            method: 'DELETE',
-            credentials: 'include',
-            headers: authHeader ? { Authorization: authHeader } : undefined
-          }
-        );
-  
-        if (response.ok) {
-          setSessions(sessions.filter(s => s.sessionId !== sessionIdToDelete));
-        }
-      } catch (error) {
-        console.error('Kunde inte ta bort session:', error);
-       
-      }
-    };
 
 
 
@@ -177,7 +150,7 @@ export const Chat: React.FC = () => {
               }
             }}
           >
-            Tidigare konversationer
+            Historik 
           </button>
           
           {isSessionsVisible && (
@@ -205,7 +178,7 @@ export const Chat: React.FC = () => {
               ) : (
                 <div className="chat-sessions-list">
                   {sessions.map((session) => (
-                    <div
+                    <li
                       key={session.sessionId}
                       className="chat-sessions-item"
                       onClick={() => handleSessionSelect(session.sessionId)}
@@ -218,14 +191,14 @@ export const Chat: React.FC = () => {
                         type="button"
                         className="session-delete-btn"
                         onClick={(e) => {
-                          e.stopPropagation(); // Förhindra att handleSessionSelect triggas
-                          handleDeleteSession(session.sessionId);
-                        }}
+                        e.stopPropagation();
+                        handleDeleteSession(session.sessionId, setSessions, sessions);
+                      }}
                       >
                         <span>Ta bort</span>{' '}
                         <FontAwesomeIcon icon={faTrash} />
                       </button>
-                    </div>
+                    </li>
                   ))}
                 </div>
               )}
