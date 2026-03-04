@@ -136,18 +136,26 @@ const Header = () => {
           {username && (
             <>
               {isParent && (
-                <button onClick={() => {
-                  navigate('/family');
-                  setIsMenuOpen(false);
-                }}>
-                  Bjud in familj
-                </button>
+                <>
+                  <button onClick={() => {
+                    navigate('/parent');
+                    setIsMenuOpen(false);
+                  }}>
+                    Föräldraöversikt
+                  </button>
+                  <button onClick={() => {
+                    navigate('/family');
+                    setIsMenuOpen(false);
+                  }}>
+                    Bjud in familj
+                  </button>
+                </>
               )}
-             
               <button onClick={handleLogout}>Logga ut</button>
               <button onClick={handleDeleteAccount} className="delete-btn">Radera konto</button>
             </>
           )}
+
           {!username && (
             <NavLink to="/" onClick={() => setIsMenuOpen(false)} className="mobile-only">Logga in</NavLink>
           )}
