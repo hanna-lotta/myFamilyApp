@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import useUserStore from '../store/userStore';
 import '../components/ParentView.css';
+import './MyProfile.css';
 import { useNavigate } from 'react-router';
 import { getAuthHeader } from '../utils/auth';
 
@@ -10,20 +11,30 @@ type UserStats = {
   questionCount: number;
   avgQuizScore: number | null;
 };
+type DailyStat = {
+  date: string;
+  minutes: number;
+  questionCount: number;
+};
+
+interface TodoItem {
+  text: string;
+  todoId: string;
+  createdAt?: string;
+}
+
 
 const MyProfile = () => {
   const user = useUserStore((s) => s.user);
   const navigate = useNavigate();
   const [stats, setStats] = useState<UserStats | null>(null);
-  const [dailyStats, setDailyStats] = useState<{ date: string; minutes: number; questionCount: number }[]>([]);
+  const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [todoInput, setTodoInput] = useState('');
-  const [todos, setTodos] = useState<string[]>(() => {
-    // Ladda från localStorage om det finns
-    const saved = localStorage.getItem('myprofile_todos');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [todoLoading, setTodoLoading] = useState(false);
+  const [todoError, setTodoError] = useState<string | null>(null);
 
   // Redirect om inte inloggad
   useEffect(() => {
@@ -55,19 +66,69 @@ const MyProfile = () => {
     fetchStats();
   }, []);
 
-  const addTodo = () => {
+  useEffect(() => {
+    const fetchTodos = async () => {
+      setTodoLoading(true);
+      setTodoError(null);
+      try {
+		const authHeader = getAuthHeader();
+        const res = await fetch('/api/user/todos', { headers: authHeader ? { Authorization: authHeader } : {} });
+        const data = await res.json();
+        setTodos(data.todos || []);
+      } catch (err) {
+        setTodoError('Kunde inte hämta att göra-listan.');
+      } finally {
+        setTodoLoading(false);
+      }
+    };
+    fetchTodos();
+  }, []);
+
+  const addTodo = async () => {
     if (todoInput.trim()) {
-      const updated = [...todos, todoInput.trim()];
-      setTodos(updated);
-      localStorage.setItem('myprofile_todos', JSON.stringify(updated));
-      setTodoInput('');
+      setTodoLoading(true);
+      setTodoError(null);
+      try {
+		const authHeader = getAuthHeader();
+        const res = await fetch('/api/user/todos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: authHeader ? authHeader : ''
+
+          },
+          body: JSON.stringify({ text: todoInput.trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+          setTodos([...todos, { text: todoInput.trim(), todoId: data.todoId, createdAt: new Date().toISOString() }]);
+          setTodoInput('');
+        } else {
+          setTodoError('Kunde inte lägga till att göra.');
+        }
+      } catch (err) {
+        setTodoError('Kunde inte lägga till att göra.');
+      } finally {
+        setTodoLoading(false);
+      }
     }
   };
 
-  const removeTodo = (idx: number) => {
-    const updated = todos.filter((_, i) => i !== idx);
-    setTodos(updated);
-    localStorage.setItem('myprofile_todos', JSON.stringify(updated));
+  const removeTodo = async (todoId: string) => {
+    setTodoLoading(true);
+    setTodoError(null);
+    try {
+      const authHeader = getAuthHeader();
+      await fetch(`/api/user/todos/${todoId}`, {
+        method: 'DELETE',
+        headers: authHeader ? { Authorization: authHeader } : {}
+      });
+      setTodos(todos.filter(todo => todo.todoId !== todoId));
+    } catch (err) {
+      setTodoError('Kunde inte ta bort att göra.');
+    } finally {
+      setTodoLoading(false);
+    }
   };
 
   if (!user) {
@@ -79,7 +140,7 @@ const MyProfile = () => {
   }
 
   return (
-    <div className="parent-view" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
+    <div className="parent-view" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
       <div className="parent-header">
         <div>
           <h2 className="parent-subtitle">Välkommen, <strong>{user.username}</strong>!</h2>
@@ -88,7 +149,7 @@ const MyProfile = () => {
       {loading && <span className="status">Laddar statistik...</span>}
       {error && <span className="status error">{error}</span>}
       {stats && (
-        <div className="summary-grid" style={{ maxWidth: 600, margin: '2rem auto 1.5rem' }}>
+        <div className="summary-grid">
           <div className="summary-card">
             <h3>Studietid</h3>
             <p>{stats.totalMinutes ?? 0} min</p>
@@ -107,7 +168,7 @@ const MyProfile = () => {
         </div>
       )}
       {dailyStats.length > 0 && (
-        <div className="panel" style={{ maxWidth: 600, width: '100%', margin: '0 auto 1.5rem' }}>
+        <div className="panel">
           <h3>Studietid per dag</h3>
           <div className="daily-stats">
             {dailyStats.map((day) => (
@@ -126,7 +187,7 @@ const MyProfile = () => {
         </div>
       )}
       {/* ToDo-lista */}
-      <div className="panel" style={{ maxWidth: 600, width: '100%', margin: '0 auto 2rem' }}>
+      <div className="panel">
         <h3>Att göra </h3>
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
           <input
@@ -145,15 +206,18 @@ const MyProfile = () => {
               fontSize: '1rem'
             }}
             onKeyDown={e => { if (e.key === 'Enter') addTodo(); }}
+            disabled={todoLoading}
           />
-          <button className="close-session-btn" style={{ minWidth: 80 }} onClick={addTodo}>Lägg till</button>
+          <button className="close-session-btn" style={{ minWidth: 80 }} onClick={addTodo} disabled={todoLoading}>Lägg till</button>
         </div>
+        {todoError && <div style={{ color: 'red', marginBottom: 8 }}>{todoError}</div>}
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {todos.length === 0 && <li style={{ color: 'rgba(255,255,255,.7)' }}>Inga att göra ännu.</li>}
-          {todos.map((todo, idx) => (
-            <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: 6 }}>
-              <span style={{ flex: 1 }}>{todo}</span>
-              <button className="close-session-btn" style={{ padding: '0.2rem 0.8rem', fontSize: '0.9rem' }} onClick={() => removeTodo(idx)}>
+          {todoLoading && <li style={{ color: 'rgba(255,255,255,.7)' }}>Laddar...</li>}
+          {todos.length === 0 && !todoLoading && <li style={{ color: 'rgba(255,255,255,.7)' }}>Inga att göra ännu.</li>}
+          {todos.map((todo) => (
+            <li key={todo.todoId} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: 6 }}>
+              <span style={{ flex: 1 }}>{todo.text}</span>
+              <button className="close-session-btn" style={{ padding: '0.2rem 0.8rem', fontSize: '0.9rem' }} onClick={() => removeTodo(todo.todoId)} disabled={todoLoading}>
                 Ta bort
               </button>
             </li>

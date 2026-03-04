@@ -1,3 +1,4 @@
+
 /* Close session button styled like navlinks: transparent, white text, border, rounded, hover effect */
 .close-session-btn {
   text-decoration: none;
@@ -23,15 +24,19 @@
 .parent-view {
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
   gap: 1.5rem;
   color: var(--text);
   padding: 1.5rem;
+  min-height: 100dvh;
 }
 
 .parent-header {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
   justify-content: space-between;
+  text-align: center;
   gap: 1rem;
 }
 
@@ -40,6 +45,7 @@
 }
 
 .parent-subtitle {
+  text-align: center;
   margin: 0.25rem 0 0;
   color: rgba(255, 255, 255, 0.65);
 }
@@ -55,9 +61,11 @@
 
 .filters {
   display: flex;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 0.75rem 1.25rem;
   align-items: center;
+  margin-bottom: 1rem;
 }
 
 .filters label {
@@ -89,7 +97,39 @@
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
 }
+/* Gör summary-cards responsiva */
+.summary-grid {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 
+.summary-card {
+  flex: 1 1 0;
+  background: rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 1.2rem 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 600px) {
+  .summary-grid {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  .summary-card {
+    max-width: 100%;
+    min-width: 0;
+    margin-bottom: 0.7rem;
+  }
+  .parent-view {
+    padding: 1rem;
+  }
+}
 .summary-card {
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--stroke2);
@@ -278,18 +318,7 @@
   }
 }
 
-/* Footer styling */
-.parent-footer {
-	width: 100%;
-	padding: 2rem;
-	border-top: 2px solid var(--accent1);
-	background: linear-gradient(135deg, rgba(124,58,237,.95), rgba(56,189,248,.65));
-	backdrop-filter: blur(20px);
-	-webkit-backdrop-filter: blur(20px);
-	text-align: center;
-	animation: slideUpIn 0.4s ease-out;
-}
-
+/*footer animation
 @keyframes slideUpIn {
 	from {
 		opacity: 0;
@@ -299,4 +328,4 @@
 		opacity: 1;
 		transform: translateY(0);
 	}
-}
+}*/
