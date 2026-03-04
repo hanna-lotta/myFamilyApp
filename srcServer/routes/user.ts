@@ -2,7 +2,7 @@ import express from 'express'
 import type { Router, Request, Response } from 'express'
 import { validateJwt } from '../data/auth.js';
 import type { ErrorMessage, DeleteAccountRes } from '../data/types.js'
-import { DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb'
+import { DeleteCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb'
 import { db, tableName } from '../data/dynamoDb.js'
 import { z } from 'zod';
 
@@ -181,6 +181,78 @@ router.get('/stats', async (req: Request, res: Response) => {
     console.error('user/stats error:', (error as any)?.message);
     res.status(500).send({ error: 'Kunde inte hämta statistik.' });
   }
+});
+
+// GET /api/user/todos - hämta alla todos för inloggad användare
+router.get('/todos', async (req, res) => {
+  const payload = validateJwt(req.headers.authorization);
+  if (!payload) return res.status(401).json({ error: 'Unauthorized' });
+
+  const pk = `FAMILY#${payload.familyId}`;
+  const skPrefix = `USER#${payload.userId}#TODO#`;
+
+  const result = await db.send(new QueryCommand({
+    TableName: tableName,
+    KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :skPrefix)',
+    ExpressionAttributeNames: { '#pk': 'pk', '#sk': 'sk' },
+    ExpressionAttributeValues: { ':pk': pk, ':skPrefix': skPrefix }
+  }));
+
+  const todos = (result.Items || []).map(item => ({
+    todoId: item.sk.split('#').pop(),
+    text: item.text,
+    createdAt: item.createdAt
+  }));
+  res.json({ todos });
+});
+
+// POST /api/user/todos - skapa en ny todo
+const todoSchema = z.object({
+  text: z.string().min(1, 'Todo får inte vara tom')
+});
+
+router.post('/todos', async (req, res) => {
+  const payload = validateJwt(req.headers.authorization);
+  if (!payload) return res.status(401).json({ error: 'Unauthorized' });
+
+  const parseResult = todoSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({ error: 'Ogiltig todo', issues: parseResult.error.issues });
+  }
+  const { text } = parseResult.data;
+
+  const pk = `FAMILY#${payload.familyId}`;
+  const todoId = Date.now().toString();
+  const sk = `USER#${payload.userId}#TODO#${todoId}`;
+
+  await db.send(new PutCommand({
+    TableName: tableName,
+    Item: {
+      pk,
+      sk,
+      text,
+      createdAt: new Date().toISOString()
+    }
+  }));
+  res.json({ success: true, todoId });
+});
+
+// DELETE /api/user/todos/:todoId - ta bort en todo
+router.delete('/todos/:todoId', async (req, res) => {
+  const payload = validateJwt(req.headers.authorization);
+  if (!payload) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { todoId } = req.params;
+  if (!todoId) return res.status(400).json({ error: 'Missing todoId' });
+
+  const pk = `FAMILY#${payload.familyId}`;
+  const sk = `USER#${payload.userId}#TODO#${todoId}`;
+
+  await db.send(new DeleteCommand({
+    TableName: tableName,
+    Key: { pk, sk }
+  }));
+  res.json({ success: true });
 });
 
 export default router
