@@ -162,7 +162,7 @@ const ParentView = () => {
 					<p>{overview?.avgQuizScore ?? '-'}%</p>
 					<span>Genomsnittlig poäng</span>
 				</div>
-				{/* Ämne / Mest tränat ämne borttagen */}
+				
 			</div>
 
 			<div className="panel">
