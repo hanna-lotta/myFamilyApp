@@ -115,3 +115,129 @@ export const childInviteResponseSchema = z.object({
   childInviteCode: z.string()
 });
 export type ChildInviteResponse = z.infer<typeof childInviteResponseSchema>;
+
+export const chatRequestSchema = z.object({
+  message: z.string().trim().min(1).max(4000),
+  familyId: z.string().trim().min(1),
+  userId: z.string().trim().min(1),
+  sessionId: z.string().trim().min(1),
+  mode: z.enum(['quiz', 'chat']).optional(),
+  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+  subject: z.string().trim().min(1).optional()
+});
+
+export const statsRequestSchema = z.object({
+  familyId: z.string().trim().min(1),
+  userId: z.string().trim().min(1),
+  sessionId: z.string().trim().min(1),
+  quizScore: z.number().min(0).max(100),
+  questionCount: z.number().min(0).optional(),
+  subject: z.string().trim().min(1).optional()
+});
+
+export type ChatRequestBody = z.infer<typeof chatRequestSchema>;
+export type StatsRequestBody = z.infer<typeof statsRequestSchema>;
+
+
+export const ChatMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  text: z.string()
+});
+
+export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+
+const MessagesResponseSchema = z.object({
+  items: z.array(ChatMessageSchema)
+});
+
+export type MessagesResponse = z.infer<typeof MessagesResponseSchema>;
+
+export const messagesQuerySchema = z.object({
+  familyId: z.preprocess(
+	(value) => (Array.isArray(value) ? value[0] : value),
+	z.string().trim().min(1)
+  ),
+  userId: z.preprocess(
+	(value) => (Array.isArray(value) ? value[0] : value),
+	z.string().trim().min(1)
+  ),
+  sessionId: z.preprocess(
+	(value) => (Array.isArray(value) ? value[0] : value),
+	z.string().trim().min(1)
+  )
+});
+
+export type MessagesQuery = z.infer<typeof messagesQuerySchema> & {
+  [key: string]: string | undefined;
+};
+
+
+export const ParentMessagesResponseSchema = z.object({
+  items: z.array(ChatMessageSchema)
+});
+
+export type ParentMessagesResponse = z.infer<typeof ParentMessagesResponseSchema>;
+
+
+export const parentMessagesQuerySchema = z.object({
+  childUserId: z.preprocess(
+    (value) => (Array.isArray(value) ? value[0] : value),
+    z.string().trim().min(1)
+  ),
+  sessionId: z.preprocess(
+    (value) => (Array.isArray(value) ? value[0] : value),
+    z.string().trim().min(1)
+  )
+});
+
+export type ParentMessagesQuery = z.infer<typeof parentMessagesQuerySchema> & {
+  [key: string]: string | undefined;
+};
+
+export const sessionItemSchema = z.object({
+  sessionId: z.string(),
+  title: z.string()
+});
+
+export const sessionsResponseSchema = z.array(sessionItemSchema);
+
+export type SessionsResponse = z.infer<typeof sessionsResponseSchema>;
+
+export const sessionsQuerySchema = z.object({
+  familyId: z.preprocess(
+    (value) => (Array.isArray(value) ? value[0] : value),
+    z.string().trim().min(1)
+  ),
+  userId: z.preprocess(
+    (value) => (Array.isArray(value) ? value[0] : value),
+    z.string().trim().min(1)
+  )
+});
+
+export type SessionsQuery = z.infer<typeof sessionsQuerySchema> & {
+  [key: string]: string | undefined;
+};
+
+
+export const deleteMessageQuerySchema = z.object({
+  familyId: z.preprocess(
+	(value) => (Array.isArray(value) ? value[0] : value),
+	z.string().trim().min(1)
+  ),
+  userId: z.preprocess(
+	(value) => (Array.isArray(value) ? value[0] : value),
+	z.string().trim().min(1)
+  ),
+  sessionId: z.preprocess(
+	(value) => (Array.isArray(value) ? value[0] : value),
+	z.string().trim().min(1)
+  ),
+  timestamp: z.preprocess(
+	(value) => (Array.isArray(value) ? value[0] : value),
+	z.string().trim().min(1)
+  )
+});
+
+export type DeleteMessageQuery = z.infer<typeof deleteMessageQuerySchema> & {
+  [key: string]: string | undefined;
+};
