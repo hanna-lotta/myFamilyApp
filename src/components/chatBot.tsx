@@ -1,19 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ChatBot.css';
-import { Quiz } from './Quiz';
-import { SpeakButton } from './SpeakButton';
-import { SpeechToTextButton } from './SpeechToTextButton';
-import { QuizControl } from './QuizControl';
+import { Quiz } from './Quiz.tsx';
+import { SpeakButton } from './SpeakButton.tsx';
+import { SpeechToTextButton } from './SpeechToTextButton.tsx';
+import { QuizControl } from './QuizControl.tsx';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrashCan } from '@fortawesome/free-solid-svg-icons';
-import { getAuthHeader } from '../utils/auth';
+import { getAuthHeader } from '../utils/auth.ts';
 import { useLocation } from 'react-router';
-import type { Message } from '../types/types';
-import { getAuthParams } from '../utils/authHelper';
+import type { Message } from '../types/types.ts';
+import { getAuthParams } from '../utils/authHelper.ts';
 import {useChatHistory} from '../hooks/useChatHistory.ts';
-import { handleDeleteMessage } from '../hooks/useChatActions';
-import { useOcr } from '../hooks/useOcr';
-import { PlusButton } from './PlusButton';
+import { handleDeleteMessage } from '../hooks/useChatActions.ts';
+import { useOcr } from '../hooks/useOcr.ts';
+import { PlusButton } from './PlusButton.tsx';
 import EmojiPicker from 'emoji-picker-react';
 import sendIcon from '../assets/sendIcon.png'
 
