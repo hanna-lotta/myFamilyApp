@@ -4,9 +4,8 @@ import { db, tableName } from '../data/dynamoDb.js';
 import { createToken } from '../data/auth.js';
 import { genSalt, hash } from 'bcrypt'
 import { registerSchema, ChildInviteLookupItemSchema, UserLookupItemSchema, JwtResponseSchema } from '../validation.js';
-import type { JwtResponseType } from '../validation.js';
 import { PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
-import type { JwtResponse, UserBody, ErrorMessage, FamilyMetadata, UserLookupItem, ChildInviteLookupItem, RegisterResponse } from '../data/types.js';
+import type { JwtResponse, UserBody, ErrorMessage, UserLookupItem, RegisterResponse } from '../data/types.js';
 
 /**
  * Ny familje-struktur med invite-system:
