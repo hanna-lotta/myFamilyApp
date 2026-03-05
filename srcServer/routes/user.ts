@@ -42,10 +42,8 @@ router.delete('/delete', async (req: Request<{}, DeleteAccountRes | ErrorMessage
 		}));
 
 		res.send({ success: true });
-		console.log(`User deleted: ${payload.username} (${payload.userId})`);
 
 	} catch (error) {
-		console.log('user.ts error:', (error as any)?.message);
 		res.status(500).send({ error: 'Internal server error' });
 	}
 });

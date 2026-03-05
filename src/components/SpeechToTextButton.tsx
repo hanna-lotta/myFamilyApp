@@ -24,7 +24,7 @@ export const SpeechToTextButton: React.FC<SpeechToTextButtonProps> = ({
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-      //om det inte finns stöd, sätt recognitionRef till null och avsluta.
+      //om det inte finns stöd, sätts recognitionRef till null och returnera
     if (!SpeechRecognition) {
       recognitionRef.current = null;
       return;

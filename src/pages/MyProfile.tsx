@@ -7,7 +7,6 @@ import { getAuthHeader } from '../utils/auth';
 import { profileSchema, todoSchema } from '../data/formValidation';
 
 
-
 // Typ för stats (kan utökas om backend returnerar mer)
 type UserStats = {
   totalMinutes: number;
@@ -26,12 +25,11 @@ interface TodoItem {
   createdAt?: string;
 }
 
-// Här kan du använda profileSchema för att validera riktig användardata när det behövs
-
 const MyProfile = () => {
   const user = useUserStore((s) => s.user);
   const navigate = useNavigate();
 
+  // Validera användarprofilen
   const parsedProfile = user ? profileSchema.safeParse(user) : null;
 
   const [stats, setStats] = useState<UserStats | null>(null);

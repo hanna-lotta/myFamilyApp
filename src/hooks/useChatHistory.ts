@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getAuthParams } from '../utils/authHelper';
 import { getAuthHeader } from '../utils/auth';
-import { Message } from '../types/types';
+import type { Message } from '../types/types';
 
 export function useChatHistory(sessionId: string) {
   const [messages, setMessages] = useState<Message[]>([]);

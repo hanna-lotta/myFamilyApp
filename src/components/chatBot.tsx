@@ -171,9 +171,9 @@ export const ChatBot: React.FC = () => {
       // Om vi har OCR-text skickar vi bara texten, inte bilden för att spara bandbredd
       if (imageToSend && !ocrText) {
         formData.append('image', imageToSend);
-        console.log('📷 Sending image + text to server');
+       
       } else if (ocrText) {
-        console.log('📝 Sending OCR text only (no image)');
+        
       }
       
       const response = await fetch('/api/chat', {
@@ -289,17 +289,14 @@ export const ChatBot: React.FC = () => {
       setIsLoading(false);
     }
   };
-  
-  // const { loadSessionId } = useLocation().state || {};
-  
-  
+  // När quizet är klart, skicka resultatet till servern för att spara det i databasen, det görs i handleQuizComplete som skickas som prop till Quiz-komponenten. 
   const handleQuizComplete = async (quizScore: number, questionCount: number) => {
     const authParams = getAuthParams();
     const authHeader = getAuthHeader();
     if (!authParams || !authHeader) {
       return;
     }
-    
+    // Skicka quizresultatet till servern 
     try {
       await fetch('/api/chat/stats', {
         method: 'POST',
@@ -308,6 +305,7 @@ export const ChatBot: React.FC = () => {
           'Content-Type': 'application/json',
           Authorization: authHeader
         },
+        // Skicka familyId, userId, sessionId, quizScore och questionCount i request body så att servern kan spara det i databasen kopplat till rätt användare och familj.
         body: JSON.stringify({
           familyId: authParams.familyId,
           userId: authParams.userId,
@@ -526,13 +524,11 @@ export const ChatBot: React.FC = () => {
         value={inputText}
         onChange={(e) => setInputText(e.target.value)}
         onKeyDown={handleKeyDown}
-        // placeholder="Skriv din fråga här..."
         className="chat-input"
         rows={2}
         disabled={isLoading}
         />
         
-        {/* Plus-knapp inne i textfältet (vänster) */}
         <div className='plus-box'
         >
         <PlusButton
@@ -553,8 +549,7 @@ export const ChatBot: React.FC = () => {
         }
         />
         </div>
-        
-        {/* Speech-to-text inne i textfältet (höger) */}
+      
         <div className='speech-box'
         >
         <SpeechToTextButton onResult={(text) => setInputText(text)} />
