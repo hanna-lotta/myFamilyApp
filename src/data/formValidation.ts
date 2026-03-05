@@ -12,6 +12,15 @@ export const RegisterResponseSchema = z.object({
 
 export type RegisterResponse = z.infer<typeof RegisterResponseSchema>
 
+export const RegisterFormSchema = z.object({
+  username: z.string().min(3, 'Minst 3 tecken').max(20, 'Max 20 tecken'),
+  password: z.string().min(6, 'Minst 6 tecken'),
+  email: z.string().email('Ogiltig e-post').optional(),
+  inviteCode: z.string().optional(),
+});
+
+export type RegisterForm = z.infer<typeof RegisterFormSchema>;
+
 
 
 

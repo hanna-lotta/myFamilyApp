@@ -171,10 +171,12 @@ const ParentView = () => {
 					{dailyStats.map((day) => (
 						<div key={day.date} className="daily-row">
 							<span className="daily-date">{day.date}</span>
-							<div className="daily-bar">
-								<div
-									className="daily-fill"
-									style={{ width: `${Math.round((day.minutes / maxMinutes) * 100)}%` }}
+							<div className="daily-bar"> {/* sätter bredden på .daily-fill dynamiskt, baserat på hur många minuter användaren studerat den dagen jämfört med maxMinutes under perioden.
+							Om en dag har flest minuter, blir stapeln 100% bred. Har dagen hälften så många minuter som max, blir stapeln 50% bred.
+							CSS (med transition) gör att stapeln animeras snyggt när värdet ändras. Man får en lila stapel som visar studietid per dag, där längden är proportionell mot den dag med mest studietid*/}
+								<div 
+									className="daily-fill"  
+									style={{ width: `${Math.round((day.minutes / maxMinutes) * 100)}%` }} //Om day.minutes är 30 och maxMinutes är 60: (30 / 60) * 100 = 50 (%) Då blir stapeln 50% bred.
 								/>
 							</div>
 							<span className="daily-meta">{day.minutes} min • {day.questionCount} frågor</span>

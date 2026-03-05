@@ -3,31 +3,14 @@ import type { Request, Response } from 'express';
 import OpenAI from 'openai';
 import multer from 'multer';
 import { QueryCommand, BatchWriteCommand, PutCommand, GetCommand, DeleteCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
-import { z } from 'zod';
 import { db, tableName } from '../../data/dynamoDb.js'
 import { tools, executeTool } from './tools.js';
 import { validateJwt } from '../../data/auth.js';
 import type { JwtPayload } from '../../data/auth.js';
-import type { ErrorMessage, JwtResponse } from '../../data/types.js';
-/** Denna fil hanterar chattfunktionaliteten för läxhjälpsassistenten. Den tar emot meddelanden och bilder från frontend, skickar dem till OpenAI API och returnerar AI-genererade svar. Om API-nyckeln saknas eller om det uppstår ett fel, används en mock-funktion för att generera svar baserat på användarens meddelande.	*/
+import type { ErrorMessage } from '../../data/types.js';
+import { chatRequestSchema, deleteMessageQuerySchema, messagesQuerySchema, parentMessagesQuerySchema, ParentMessagesResponseSchema, sessionsQuerySchema, sessionsResponseSchema, statsRequestSchema, type ChatRequestBody, type DeleteMessageQuery, type MessagesQuery, type MessagesResponse, type ParentMessagesQuery, type ParentMessagesResponse, type SessionsQuery, type SessionsResponse, type StatsRequestBody } from '../../validation.js';
 
-/** Rekommenderad struktur:
- * srcServer/
-  routes/
-    chat.ts          # Bara routing och OpenAI-logik
-  tools/
-    definitions.ts   # Tool-definitions för OpenAI
-    executor.ts      # executeTool-funktionen
-    calculator.ts    # Implementationer av olika tools
-    translator.ts
-    wikipedia.ts
 
-	Eller enklare:
-	srcServer/
-  	 routes/
-      chat.ts
-     tools.ts           # Både definitions och executor
- */
 
 const router = express.Router();
 
@@ -100,7 +83,7 @@ const openai = new OpenAI({
 // Konfigurera multer för bilduppladdning
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 }, // Max 20MB (ökad från 5MB för att stöda större bilder)
+  limits: { fileSize: 20 * 1024 * 1024 }, // Max 20MB 
     fileFilter: (req, file, cb) => {
     const isImage = file.mimetype.startsWith('image/');
     const isPdf = file.mimetype === 'application/pdf';
@@ -112,27 +95,7 @@ const upload = multer({
   }
 });
 
-export const chatRequestSchema = z.object({
-  message: z.string().trim().min(1).max(4000),
-  familyId: z.string().trim().min(1),
-  userId: z.string().trim().min(1),
-  sessionId: z.string().trim().min(1),
-  mode: z.enum(['quiz', 'chat']).optional(),
-  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
-  subject: z.string().trim().min(1).optional()
-});
 
-export const statsRequestSchema = z.object({
-  familyId: z.string().trim().min(1),
-  userId: z.string().trim().min(1),
-  sessionId: z.string().trim().min(1),
-  quizScore: z.number().min(0).max(100),
-  questionCount: z.number().min(0).optional(),
-  subject: z.string().trim().min(1).optional()
-});
-
-type ChatRequestBody = z.infer<typeof chatRequestSchema>;
-type StatsRequestBody = z.infer<typeof statsRequestSchema>;
 
 interface QuizResponseBody {
   quiz: unknown[];
@@ -394,13 +357,7 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
         console.error('Quiz parse error: model did not return JSON array', quizResponse.slice(0, 300));
         return res.status(502).json({ error: 'Quiz-svaret var inte giltig JSON. Försök igen.' });
       }
-	  /*
-      console.log('Quiz response from OpenAI:', quizResponse);
-      const jsonMatch = quizResponse.match(/\[[\s\S]*\]/);
-      const quizDataRaw = jsonMatch ? jsonMatch[0] : quizResponse;
-      console.log('Extracted JSON:', quizDataRaw);
-      const quizData = JSON.parse(quizDataRaw);
-      console.log('Parsed quiz data:', quizData);*/
+	
 
       //returnera quiz till frontend
       return res.json({ quiz: quizData, timestamp });
@@ -696,38 +653,6 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
   }
 });
 
-const ChatMessageSchema = z.object({
-  role: z.enum(['user', 'assistant']),
-  text: z.string()
-});
-
-type ChatMessage = z.infer<typeof ChatMessageSchema>;
-
-const MessagesResponseSchema = z.object({
-  items: z.array(ChatMessageSchema)
-});
-
-type MessagesResponse = z.infer<typeof MessagesResponseSchema>;
-
-export const messagesQuerySchema = z.object({
-  familyId: z.preprocess(
-    (value) => (Array.isArray(value) ? value[0] : value),
-    z.string().trim().min(1)
-  ),
-  userId: z.preprocess(
-    (value) => (Array.isArray(value) ? value[0] : value),
-    z.string().trim().min(1)
-  ),
-  sessionId: z.preprocess(
-    (value) => (Array.isArray(value) ? value[0] : value),
-    z.string().trim().min(1)
-  )
-});
-
-type MessagesQuery = z.infer<typeof messagesQuerySchema> & {
-  [key: string]: string | undefined;
-};
-
 // GET endpoint, hämta alla meddelanden i en specifik session
 router.get('/messages', async (req: Request<{}, {}, {}, MessagesQuery>, res: Response<MessagesResponse | ErrorMessage>) => {
   try {
@@ -775,7 +700,7 @@ router.get('/messages', async (req: Request<{}, {}, {}, MessagesQuery>, res: Res
     }));
 
     //Returnerar items (validerade via MessagesResponseSchema) som JSON.
-	res.json(MessagesResponseSchema.parse({
+	res.json(ParentMessagesResponseSchema.parse({
   	items: result.Items || []
 }));
   } catch (error) {
@@ -865,52 +790,6 @@ try {
 });
 
 
-const ParentMessagesResponseSchema = z.object({
-  items: z.array(ChatMessageSchema)
-});
-
-type ParentMessagesResponse = z.infer<typeof ParentMessagesResponseSchema>;
-
-
-export const parentMessagesQuerySchema = z.object({
-  childUserId: z.preprocess(
-    (value) => (Array.isArray(value) ? value[0] : value),
-    z.string().trim().min(1)
-  ),
-  sessionId: z.preprocess(
-    (value) => (Array.isArray(value) ? value[0] : value),
-    z.string().trim().min(1)
-  )
-});
-
-type ParentMessagesQuery = z.infer<typeof parentMessagesQuerySchema> & {
-  [key: string]: string | undefined;
-};
-
-const sessionItemSchema = z.object({
-  sessionId: z.string(),
-  title: z.string()
-});
-
-const sessionsResponseSchema = z.array(sessionItemSchema);
-
-type SessionsResponse = z.infer<typeof sessionsResponseSchema>;
-
-export const sessionsQuerySchema = z.object({
-  familyId: z.preprocess(
-    (value) => (Array.isArray(value) ? value[0] : value),
-    z.string().trim().min(1)
-  ),
-  userId: z.preprocess(
-    (value) => (Array.isArray(value) ? value[0] : value),
-    z.string().trim().min(1)
-  )
-});
-
-type SessionsQuery = z.infer<typeof sessionsQuerySchema> & {
-  [key: string]: string | undefined;
-};
-
 
 
 // Parent endpoint, hämta alla meddelanden i ett barns session
@@ -971,29 +850,6 @@ router.get('/messages/parent', async (req: Request<{}, {}, {}, ParentMessagesQue
     res.status(500).json({ error: 'Kunde inte hämta meddelanden' });
   }
 });
-
-export const deleteMessageQuerySchema = z.object({
-  familyId: z.preprocess(
-    (value) => (Array.isArray(value) ? value[0] : value),
-    z.string().trim().min(1)
-  ),
-  userId: z.preprocess(
-    (value) => (Array.isArray(value) ? value[0] : value),
-    z.string().trim().min(1)
-  ),
-  sessionId: z.preprocess(
-    (value) => (Array.isArray(value) ? value[0] : value),
-    z.string().trim().min(1)
-  ),
-  timestamp: z.preprocess(
-    (value) => (Array.isArray(value) ? value[0] : value),
-    z.string().trim().min(1)
-  )
-});
-
-type DeleteMessageQuery = z.infer<typeof deleteMessageQuerySchema> & {
-  [key: string]: string | undefined;
-};
 
 
 // Delete endpoint, raderar Rendast ett användarmeddelande och AI-svar, 2 items totalt
