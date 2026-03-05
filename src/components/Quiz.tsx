@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { quizAnswerSchema } from '../data/formValidation';
 
 interface QuizQuestion {
   question: string;
@@ -34,6 +35,14 @@ export const Quiz: React.FC<QuizProps> = ({ questions, onAnswerSubmit, onQuizEnd
 
   //när användaren klickar ett svar, spara svaret i arrays och gå vidare till nästa fråga eller visa resultat
   const handleAnswer = (answer: string) => {
+
+    // validera svar med quizAnswerSchema
+    const result = quizAnswerSchema.safeParse({ answer });
+    if (!result.success) {
+      // Hantera valideringsfel, t.ex. visa felmeddelande eller ignorera svaret
+      alert('Ogiltigt svar: ' + result.error.issues.map(i => i.message).join(', '));
+      return;
+    }
     const newAnswers = [...answers, answer];
     setAnswers(newAnswers);
     onAnswerSubmit(answer);
@@ -44,10 +53,8 @@ export const Quiz: React.FC<QuizProps> = ({ questions, onAnswerSubmit, onQuizEnd
         return acc + (ans === questions[idx].correctAnswer ? 1 : 0);
       }, 0);
       const finalPercent = Math.round((finalCorrectCount / questions.length) * 100);
-      
       // Spara resultatet till databasen
       onQuizComplete(finalPercent, questions.length);
-      
       setShowResults(true);
     } else {
       setCurrentIndex(currentIndex + 1);

@@ -4,6 +4,8 @@ import '../components/ParentView.css';
 import './MyProfile.css';
 import { useNavigate } from 'react-router';
 import { getAuthHeader } from '../utils/auth';
+import { profileSchema, todoSchema } from '../data/formValidation';
+
 
 // Typ för stats (kan utökas om backend returnerar mer)
 type UserStats = {
@@ -23,10 +25,13 @@ interface TodoItem {
   createdAt?: string;
 }
 
-
 const MyProfile = () => {
   const user = useUserStore((s) => s.user);
   const navigate = useNavigate();
+
+  // Validera användarprofilen
+  const parsedProfile = user ? profileSchema.safeParse(user) : null;
+
   const [stats, setStats] = useState<UserStats | null>(null);
   const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,17 +41,25 @@ const MyProfile = () => {
   const [todoLoading, setTodoLoading] = useState(false);
   const [todoError, setTodoError] = useState<string | null>(null);
 
-  // Redirect om inte inloggad
+  //Rturnerna om inte inloggad eller om profilen är ogiltig
   useEffect(() => {
     if (!user) {
       navigate('/');
+      return;
     }
-  }, [user, navigate]);
+
+    if (!parsedProfile?.success) {
+      setError('Din profil är ogiltig. Logga in igen.');
+      navigate('/');
+    }
+  }, [user, navigate, parsedProfile?.success]);
+
 
   useEffect(() => {
     const fetchStats = async () => {
       setLoading(true);
       setError(null);
+
       try {
         const authHeader = getAuthHeader();
         const res = await fetch('/api/user/stats', {
@@ -63,13 +76,18 @@ const MyProfile = () => {
         setLoading(false);
       }
     };
-    fetchStats();
-  }, []);
+
+  // Kör bara om användaren är validerad
+    if (user && parsedProfile?.success) fetchStats();
+  }, [user, parsedProfile?.success]);
+
+
 
   useEffect(() => {
     const fetchTodos = async () => {
       setTodoLoading(true);
       setTodoError(null);
+
       try {
 		const authHeader = getAuthHeader();
         const res = await fetch('/api/user/todos', { headers: authHeader ? { Authorization: authHeader } : {} });
@@ -81,15 +99,29 @@ const MyProfile = () => {
         setTodoLoading(false);
       }
     };
-    fetchTodos();
-  }, []);
+
+ // Kör bara om användaren är validerad
+    if (user && parsedProfile?.success) fetchTodos();
+  }, [user, parsedProfile?.success]);
+
+  
 
   const addTodo = async () => {
-    if (todoInput.trim()) {
-      setTodoLoading(true);
-      setTodoError(null);
-      try {
-		const authHeader = getAuthHeader();
+  const parsedTodo = todoSchema.safeParse({
+    text: todoInput.trim(),
+  });
+
+  if (!parsedTodo.success) {
+    setTodoError("Texten måste vara mellan 1 och 200 tecken.");
+    return;
+  }
+
+  setTodoLoading(true);
+  setTodoError(null);
+
+  try {
+    const authHeader = getAuthHeader();
+   
         const res = await fetch('/api/user/todos', {
           method: 'POST',
           headers: {
@@ -100,19 +132,26 @@ const MyProfile = () => {
           body: JSON.stringify({ text: todoInput.trim() })
         });
         const data = await res.json();
-        if (data.success) {
-          setTodos([...todos, { text: todoInput.trim(), todoId: data.todoId, createdAt: new Date().toISOString() }]);
-          setTodoInput('');
-        } else {
+         if (data.success) {
+        setTodos([
+          ...todos,
+          {
+            text: parsedTodo.data.text,
+            todoId: data.todoId,
+            createdAt: new Date().toISOString()
+              }
+            ]);
+
+            setTodoInput('');
+          } else {
+            setTodoError('Kunde inte lägga till att göra.');
+          }
+        } catch {
           setTodoError('Kunde inte lägga till att göra.');
+        } finally {
+          setTodoLoading(false);
         }
-      } catch (err) {
-        setTodoError('Kunde inte lägga till att göra.');
-      } finally {
-        setTodoLoading(false);
-      }
-    }
-  };
+      };
 
   const removeTodo = async (todoId: string) => {
     setTodoLoading(true);
@@ -131,13 +170,7 @@ const MyProfile = () => {
     }
   };
 
-  if (!user) {
-    // Navigera bort först när komponenten är "säker" att rendera, inte direkt i render
-    useEffect(() => {
-      navigate('/');
-    }, [navigate]);
-    return null;
-  }
+  if (!user) return null;
 
   return (
     <div className="parent-view" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>

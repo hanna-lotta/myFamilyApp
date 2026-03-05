@@ -20,3 +20,22 @@ export const RegisterFormSchema = z.object({
 });
 
 export type RegisterForm = z.infer<typeof RegisterFormSchema>;
+
+
+// toDo formulär
+export const todoSchema = z.object({
+  text: z.string().min(1).max(200),
+});
+export type TodoInput = z.infer<typeof todoSchema>;
+
+// quiz svar
+export const quizAnswerSchema = z.object({
+  answer: z.string().min(1).max(100), 
+});
+
+
+export const profileSchema = z.object({
+	username: z.string().min(1),
+});
+
+

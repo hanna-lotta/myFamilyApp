@@ -1,6 +1,5 @@
 import { evaluate } from 'mathjs'; // Math.js för matematiska beräkningar
 import wiki from 'wikipedia'; // Wikipedia API
-import multer from 'multer'; // För bilduppladdning
 import type { OpenAI } from 'openai';
 
 // Typdeklaration för globalThis.openai för att undvika TypeScript-fel

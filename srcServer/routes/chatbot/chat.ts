@@ -508,8 +508,6 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
         const functionName = toolCall.function.name;
         const functionArgs = JSON.parse(toolCall.function.arguments);
         
-        console.log(`Executing tool: ${functionName} with args:`, functionArgs);
-        
         const functionResponse = await executeTool(functionName, functionArgs);
         
         // Lägg till tool-resultatet
@@ -604,7 +602,7 @@ router.post('/', upload.single('image'), async (req: Request<{}, ChatPostRespons
         }
       }));
     } else {
-      console.log('⚠️ Känsligt innehåll detekterat - meddelanden sparas INTE till databasen');
+     
     }
 
     // Hämta session för att uppdatera stats (även för känsliga meddelanden)
@@ -683,8 +681,6 @@ router.get('/messages', async (req: Request<{}, {}, {}, MessagesQuery>, res: Res
 
     //Hämtar alla items där pk matchar och sk börjar med skPrefix.
     const skPrefix = `user#${userId}#SESSION#${sessionId}#MSG#`;
-
-    console.log('Query with pk:', pk, 'sk:', skPrefix);
 
     const result = await db.send(new QueryCommand({
       TableName: tableName,
@@ -929,18 +925,15 @@ router.get('/sessions', async (req: Request<{}, SessionsResponse | ErrorMessage,
 
     const sessionMap = new Map<string, { message: string; timestamp: number }>();
     
-    console.log('Raw items from DB:', result.Items?.length);
     
     // Går igenom alla items och plockar ut:sessionId från sk via regex, timestamp från sk och message(text)
     result.Items?.forEach((item: any) => {
-      console.log('Processing item:', { sk: item.sk, role: item.role, text: item.text });
+      
       const match = item.sk.match(/#SESSION#([^#]+)#MSG#(\d+)/);
       if (match && item.role === 'user') {
         const sessionId = match[1];
         const timestamp = parseInt(match[2]);
         const messageText = item.text as string;
-        
-        console.log('Found user message:', { sessionId, timestamp, messageText });
         
         // Väljer första user meddelandet per session
         if (!sessionMap.has(sessionId) || timestamp < sessionMap.get(sessionId)!.timestamp) {
@@ -965,7 +958,6 @@ router.get('/sessions', async (req: Request<{}, SessionsResponse | ErrorMessage,
             //Sorterar sessions med localeCompare och skickar som JSON.
       .sort((a, b) => a.sessionId.localeCompare(b.sessionId));
 
-    console.log('Returning sessions:', sessions);
     res.json(sessionsResponseSchema.parse(sessions));
   } catch (error) {
     console.error('Get sessions error:', error);
