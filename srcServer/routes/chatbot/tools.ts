@@ -1,5 +1,4 @@
 import { evaluate } from 'mathjs'; // Math.js för matematiska beräkningar
-import * as deepl from 'deepl-node'; // DeepL API
 import wiki from 'wikipedia'; // Wikipedia API
 import multer from 'multer'; // För bilduppladdning
 import type { OpenAI } from 'openai';
