@@ -190,7 +190,6 @@ const ParentView = () => {
 					<div className="session-row session-header">
 						<span>Rubrik</span>
 						<span>Datum</span>
-						{/* Ämne borttagen */}
 						<span>Tid</span>
 						<span>Frågor</span>
 						<span>Quiz</span>
@@ -207,7 +206,6 @@ const ParentView = () => {
 								</button>
 							</span>
 							<span>{new Date(session.startedAt).toLocaleDateString('sv-SE')}</span>
-							{/* session.subject borttagen */}
 							<span>{session.durationMinutes} min</span>
 							<span>{session.questionCount}</span>
 							<span>{session.quizScore ?? '—'}%</span>

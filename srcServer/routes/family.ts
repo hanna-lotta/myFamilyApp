@@ -61,7 +61,7 @@ router.get('/invite-code', async (req: Request<{}, {}, {}>, res: Response<Invite
 
 	} catch (error) {
 		console.log('family.ts error:', (error as any)?.message);
-		res.status(500).send({ error: 'Internal server error' }); // Internal server error - något gick fel på servern, t.ex. problem med databasen eller annan intern logik
+		res.status(500).send({ error: 'Internal server error' }); 
 	}
 });
 
