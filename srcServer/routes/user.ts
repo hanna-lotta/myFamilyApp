@@ -5,14 +5,12 @@ import type { ErrorMessage, DeleteAccountRes } from '../data/types.js'
 import { DeleteCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb'
 import { db, tableName } from '../data/dynamoDb.js'
 import { z } from 'zod';
-
-
+import { deleteAccountResSchema, statsResponseSchema, todoIdSchema, todoItemSchema, todoSchema, todosResponseSchema, type StatsResponse, type TodoItem, type TodosResponse } from '../validation.js';
 
 const router: Router = express.Router();
 
 
-//Delete endpoint för att radera konto. Response kan vara antingen DeleteAccountRes (success) eller ErrorMessage (error)
-
+//Delete endpoint för att radera konto. 
 router.delete('/delete', async (req: Request<{}, DeleteAccountRes | ErrorMessage>, res: Response<DeleteAccountRes | ErrorMessage>) => {
 	
 	const payload = validateJwt(req.headers.authorization);
@@ -41,7 +39,14 @@ router.delete('/delete', async (req: Request<{}, DeleteAccountRes | ErrorMessage
 			}
 		}));
 
-		res.send({ success: true });
+		 // Validera response med zod
+      	const parsed = deleteAccountResSchema.safeParse({ success: true });
+      	 if (!parsed.success) {
+        res.status(500).send({ error: 'Fel i delete-response-format', issues: parsed.error.issues });
+        return;
+      }
+
+		res.send(parsed.data);
 		console.log(`User deleted: ${payload.username} (${payload.userId})`);
 
 	} catch (error) {
@@ -50,14 +55,6 @@ router.delete('/delete', async (req: Request<{}, DeleteAccountRes | ErrorMessage
 	}
 });
 
-// Zod-schema för användarstatistik
-const UserStatsSchema = z.object({
-  totalMinutes: z.number(),
-  questionCount: z.number(),
-  avgQuizScore: z.number().nullable(),
-});
-
-type UserStats = z.infer<typeof UserStatsSchema>;
 
 // Kontrollera att userId och familyId i requesten matchar det som finns i JWT-token. Detta förhindrar att en användare försöker komma åt eller manipulera data som inte tillhör dem.
 const requireSameUser = (
@@ -73,8 +70,11 @@ const requireSameUser = (
   return true;
 };
 
-// GET /api/user/stats - Returnerar statistik för inloggad användare
-router.get('/stats', async (req: Request, res: Response) => {
+
+
+router.get('/stats',async (req: Request, res: Response<StatsResponse | ErrorMessage>
+  ) => {
+	
   const payload = validateJwt(req.headers.authorization);
   if (!payload) {
     res.status(401).send({ error: 'Unauthorized' });
@@ -162,55 +162,65 @@ router.get('/stats', async (req: Request, res: Response) => {
       .map(([date, data]) => ({ date, ...data }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    const stats: UserStats = {
+    // Bygg response-objekt
+    const responseData = {
       totalMinutes,
       questionCount,
       avgQuizScore: quizCount > 0 ? Math.round((quizSum / quizCount) * 10) / 10 : null,
-      // topSubject (borttagen)
+      dailyStats
     };
 
-    // Validera med Zod
-    const parsed = UserStatsSchema.safeParse(stats);
+    // Validera hela response med Zod
+    const parsed = statsResponseSchema.safeParse(responseData);
     if (!parsed.success) {
       res.status(500).send({ error: 'Fel i statistik-format', issues: parsed.error.issues });
       return;
     }
-
-    res.send({ ...parsed.data, dailyStats });
+    res.json(parsed.data);
   } catch (error) {
     console.error('user/stats error:', (error as any)?.message);
     res.status(500).send({ error: 'Kunde inte hämta statistik.' });
   }
 });
 
+
+
 // GET /api/user/todos - hämta alla todos för inloggad användare
-router.get('/todos', async (req, res) => {
-  const payload = validateJwt(req.headers.authorization);
-  if (!payload) return res.status(401).json({ error: 'Unauthorized' });
+router.get(
+  '/todos',
+  async (req: Request, res: Response<TodosResponse | ErrorMessage>) => {
 
-  const pk = `FAMILY#${payload.familyId}`;
-  const skPrefix = `USER#${payload.userId}#TODO#`;
+    const payload = validateJwt(req.headers.authorization);
+    if (!payload) return res.status(401).json({ error: 'Unauthorized' });
 
-  const result = await db.send(new QueryCommand({
-    TableName: tableName,
-    KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :skPrefix)',
-    ExpressionAttributeNames: { '#pk': 'pk', '#sk': 'sk' },
-    ExpressionAttributeValues: { ':pk': pk, ':skPrefix': skPrefix }
-  }));
+    const pk = `FAMILY#${payload.familyId}`;
+    const skPrefix = `USER#${payload.userId}#TODO#`;
 
-  const todos = (result.Items || []).map(item => ({
-    todoId: item.sk.split('#').pop(),
-    text: item.text,
-    createdAt: item.createdAt
-  }));
-  res.json({ todos });
-});
+    const result = await db.send(new QueryCommand({
+      TableName: tableName,
+      KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :skPrefix)',
+      ExpressionAttributeNames: { '#pk': 'pk', '#sk': 'sk' },
+      ExpressionAttributeValues: { ':pk': pk, ':skPrefix': skPrefix }
+    }));
+
+    const todos: TodoItem[] = (result.Items || [])
+      .map(item => ({
+        todoId: typeof item.sk === 'string' ? item.sk.split('#').pop() ?? '' : '',
+        text: typeof item.text === 'string' ? item.text : '',
+        createdAt: typeof item.createdAt === 'string' ? item.createdAt : ''
+      }))
+      .filter(todo => todoItemSchema.safeParse(todo).success);
+
+    const parsed = todosResponseSchema.safeParse({ todos });
+    if (!parsed.success) {
+      return res.status(500).json({ error: 'Fel i todo-format', issues: parsed.error.issues });
+    }
+    res.json(parsed.data);
+  }
+);
+
 
 // POST /api/user/todos - skapa en ny todo
-const todoSchema = z.object({
-  text: z.string().min(1, 'Todo får inte vara tom')
-});
-
 router.post('/todos', async (req, res) => {
   const payload = validateJwt(req.headers.authorization);
   if (!payload) return res.status(401).json({ error: 'Unauthorized' });
@@ -237,13 +247,28 @@ router.post('/todos', async (req, res) => {
   res.json({ success: true, todoId });
 });
 
-// DELETE /api/user/todos/:todoId - ta bort en todo
-router.delete('/todos/:todoId', async (req, res) => {
-  const payload = validateJwt(req.headers.authorization);
-  if (!payload) return res.status(401).json({ error: 'Unauthorized' });
 
-  const { todoId } = req.params;
-  if (!todoId) return res.status(400).json({ error: 'Missing todoId' });
+interface todoIdParams {
+  todoId: string;
+}
+interface DeleteTodoRes {
+  success: boolean | ErrorMessage;
+}
+
+
+// DELETE /api/user/todos/:todoId - ta bort en todo
+router.delete('/todos/:todoId', async (req: Request<todoIdParams>, res: Response<DeleteTodoRes | ErrorMessage>) => {
+
+  const payload = validateJwt(req.headers.authorization);
+  if (!payload) 
+	return res.status(401).json({ error: 'Unauthorized' });
+
+  const parseResult = todoIdSchema.safeParse(req.params);
+  if (!parseResult.success) {
+    return res.status(400).json({ error: 'Ogiltigt todoId', issues: parseResult.error.issues });
+  }
+
+  const { todoId } = parseResult.data;
 
   const pk = `FAMILY#${payload.familyId}`;
   const sk = `USER#${payload.userId}#TODO#${todoId}`;

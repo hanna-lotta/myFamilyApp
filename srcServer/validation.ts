@@ -241,3 +241,53 @@ export const deleteMessageQuerySchema = z.object({
 export type DeleteMessageQuery = z.infer<typeof deleteMessageQuerySchema> & {
   [key: string]: string | undefined;
 };
+
+// Zod-schema för delete response
+export const deleteAccountResSchema = z.object({
+  success: z.boolean()
+});
+
+// Zod-schema för användarstatistik
+export const UserStatsSchema = z.object({
+  totalMinutes: z.number(),
+  questionCount: z.number(),
+  avgQuizScore: z.number().nullable(),
+});
+
+export type UserStats = z.infer<typeof UserStatsSchema>;
+
+// GET /api/user/stats 
+// Zod-schema för dailyStats
+export const dailyStatSchema = z.object({
+  date: z.string(),
+  minutes: z.number(),
+  questionCount: z.number()
+});
+export const statsResponseSchema = z.object({
+  totalMinutes: z.number(),
+  questionCount: z.number(),
+  avgQuizScore: z.number().nullable(),
+  dailyStats: z.array(dailyStatSchema)
+});
+export type StatsResponse = z.infer<typeof statsResponseSchema>;
+
+// Zod-schema för en todo
+export const todoItemSchema = z.object({
+  todoId: z.string().regex(/^\d+$/, 'todoId måste vara numeriskt'),
+  text: z.string().min(1, 'Todo får inte vara tom'),
+  createdAt: z.string()
+});
+export const todosResponseSchema = z.object({
+  todos: z.array(todoItemSchema)
+});
+export type TodoItem = z.infer<typeof todoItemSchema>;
+export type TodosResponse = z.infer<typeof todosResponseSchema>;
+
+export const todoSchema = z.object({
+  text: z.string().min(1, 'Todo får inte vara tom')
+});
+
+// Zod-schema för todoId
+export const todoIdSchema = z.object({
+  todoId: z.string().regex(/^\d+$/, 'todoId måste vara ett numeriskt id')
+});
