@@ -47,42 +47,29 @@ export const Chat: React.FC = () => {
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  //  const [messages, setMessages] = useState<Message[]>([]);
 
-
-  // Använd samma session per dag istället för ny vid varje reload
-    // const [sessionId] = useState(() => {
-    //   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    //   return `session_${today}`;
-    // });
 
   //hämtar tidigare konversationer 
   useEffect(() => {
     const fetchSessions = async () => {
       const authParams = getAuthParams();
-      console.log('Auth params:', authParams);
       if (!authParams) {
-        console.warn('No auth params found');
         return;
       }
 
       setIsLoadingSessions(true);
       try {
         const url = `/api/chat/sessions?familyId=${authParams.familyId}&userId=${authParams.userId}`;
-        console.log('Fetching sessions from:', url);
         const authHeader = getAuthHeader();
         
         const response = await fetch(url, {
           headers: authHeader ? { Authorization: authHeader } : undefined
         });
         
-        console.log('Response status:', response.status);
-        
         if (response.ok) {
           const data = await response.json();
-          console.log('Sessions data received:', data);
           
-          // Handle both array and object format
+          // hantera olika möjliga strukturer av sessionsdata från backend
           let sessionList: Session[] = [];
           if (Array.isArray(data)) {
             sessionList = data;
@@ -92,7 +79,6 @@ export const Chat: React.FC = () => {
             sessionList = data.items;
           }
           
-          console.log('Parsed sessions:', sessionList);
           setSessions(sessionList);
         } else {
           console.error('Failed to fetch sessions. Status:', response.status);
@@ -125,7 +111,6 @@ export const Chat: React.FC = () => {
   }, isSessionsVisible);
 
   const handleSessionSelect = (sessionId: string) => {
-    console.log('hämtar vald session', sessionId);
     navigate('/chat', { state: { loadSessionId: sessionId } });
     setIsSessionsOpen(false);
   };

@@ -75,21 +75,18 @@ const Login = () => {
 			})
 
 			if (!response.ok) {
-				console.log(`Server error: ${response.status}`)
 				return
 			}
 
 			const data = await response.json()
 			const validate = RegisterResponseSchema.safeParse(data) //validera att svaret från backend (API-responsen)
 			if (!validate.success) {
-				console.log('Server returned an unexpected response')
 				return
 			}
 
 			if (data.success) {
 				const jwt: string | undefined = data.token
 				if (!jwt) {
-					console.log('Server did not return a token')
 					return
 				}
 				localStorage.setItem(LS_KEY, jwt)
@@ -101,10 +98,10 @@ const Login = () => {
 				// Navigera till personlig profil efter lyckad login
 				navigate('/my-profile')
 			} else {
-				console.log('Login failed')
+				
 			}
 		} catch (err) {
-			console.log('Network or server error')
+			
 		}
 	}
 	
@@ -136,7 +133,7 @@ const Login = () => {
 			})
 
 			if (!response.ok) {
-				console.log(`Server error: ${response.status}`)
+				
 				return
 			}
 
@@ -144,10 +141,8 @@ const Login = () => {
 
 
 			if (data.success) {
-				console.log('Registrering lyckades!')
 				const jwt: string | undefined = data.token
 				if (!jwt) {
-					console.log('Server did not return a token')
 					return
 				}
 				localStorage.setItem(LS_KEY, jwt)
@@ -167,10 +162,8 @@ const Login = () => {
 					navigate('/my-profile')
 				}
 			} else {
-				console.log('Registration failed')
 			}
 		} catch (err) {
-			console.log('Network or server error')
 		}
 	}
 	

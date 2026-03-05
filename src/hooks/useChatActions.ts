@@ -1,4 +1,3 @@
-
 import { getAuthParams } from '../utils/authHelper';
 import { getAuthHeader } from '../utils/auth';
 import type { Message, Session } from '../types/types';

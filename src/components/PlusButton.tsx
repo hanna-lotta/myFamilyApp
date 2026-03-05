@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faCamera } from '@fortawesome/free-solid-svg-icons';
 import './PlusButton.css';
 
-// Props för PlusButton-komponenten
+// Props för PlusButton komponenten
 interface PlusButtonProps {
   disabled?: boolean;
   onAttachClick: () => void;
@@ -35,7 +35,6 @@ export const PlusButton: React.FC<PlusButtonProps> = ({
   return (
     <div className="plus-button-container">
       
-      {/* visar själva emojirutan */}
       {showEmojiPicker && (
         <div className="emoji-picker-wrapper" ref={emojiPickerRef}>
           {EmojiComponent}

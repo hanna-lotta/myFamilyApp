@@ -27,7 +27,7 @@ const Header = () => {
   const userRole = authHeader ? decodeJwt(authHeader.replace('Bearer: ', ''))?.role : null;
   const isParent = userRole === 'parent';
 
-  // Klick utanför dropdown
+  // Klick utanför för att stänga i mindre vy
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -117,7 +117,7 @@ const Header = () => {
           )}
         </nav>
 
-        {/* Hamburger icon for mobile */}
+        {/* meny ikon för mobil/desktop vy */}
         <FontAwesomeIcon
           icon={faBars}
           className="menu-icon"
@@ -126,10 +126,9 @@ const Header = () => {
 
       </div>
 
-      {/* Mobile menu */}
       {isMenuOpen && (
         <div className="dropdown-menu mobile-menu" ref={menuRef}>
-          {/* Visa Chat och Profil endast på mobil */}
+          {/* Visa knappen chat och Profil endast på mobil */}
           <NavLink to="/my-profile" onClick={() => setIsMenuOpen(false)} className="mobile-only">Profil</NavLink>
           <NavLink to="/chat" onClick={() => setIsMenuOpen(false)} className="mobile-only">Chat</NavLink>
 

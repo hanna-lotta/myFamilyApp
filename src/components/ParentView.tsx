@@ -130,7 +130,6 @@ const ParentView = () => {
 					<h2>Föräldraöversikt</h2>
 					<p className="parent-subtitle">Sammanfattning av {childUsername}s chatthistorik och studiestatistik.</p>
 				</div>
-				{/* {usingMock && <span className="badge">Demo</span>} */}
 			</div>
 
 			<div className="filters">
