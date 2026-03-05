@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import '../App.css'
 import './Login.css'
-import { RegisterResponseSchema } from '../data/validation'
+import { RegisterResponseSchema } from '../data/formValidation'
 import { useNavigate } from 'react-router'
 import { getAuthHeader } from '../utils/auth'
 import useUserStore from '../store/userStore'
@@ -80,7 +80,7 @@ const Login = () => {
 			}
 
 			const data = await response.json()
-			const validate = RegisterResponseSchema.safeParse(data)
+			const validate = RegisterResponseSchema.safeParse(data) //validera att svaret från backend (API-responsen)
 			if (!validate.success) {
 				console.log('Server returned an unexpected response')
 				return

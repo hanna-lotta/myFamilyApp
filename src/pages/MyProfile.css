@@ -58,7 +58,7 @@
       padding-right: 2rem;
       display: flex;
       flex-direction: column;
-      align-items: center !important;
-      text-align: center !important;
+      align-items: center;
+      text-align: center;
     }
 }
