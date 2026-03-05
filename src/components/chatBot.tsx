@@ -18,7 +18,7 @@ import EmojiPicker from 'emoji-picker-react';
 import sendIcon from '../assets/sendIcon.png'
 
 
-export const ChatBot: React.FC = () => {
+const ChatBot: React.FC = () => {
   
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -569,3 +569,5 @@ export const ChatBot: React.FC = () => {
     </QuizControl>
   );
 };
+
+export default ChatBot;

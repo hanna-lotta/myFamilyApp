@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChatBot } from '../components/ChatBot';
+import ChatBot from '../components/chatBot';
 import './Chat.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faTrash} from '@fortawesome/free-solid-svg-icons';
