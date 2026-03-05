@@ -5,6 +5,9 @@ import App from './App.tsx'
 import Login from './pages/Login.tsx'
 import MyProfile from './pages/MyProfile.tsx'
 import ProtectedRoute from './components/ProtectedRoute.tsx'
+import { Chat } from './pages/Chat.tsx'
+import FamilyInviteManager from './components/FamilyInviteManager.tsx'
+import ParentView from './components/ParentView.tsx'
 
 const router = createHashRouter([
 	{
@@ -12,12 +15,24 @@ const router = createHashRouter([
 		Component: App,
 		children: [
 			{
-				index: true,
-				Component: Login
+			index: true,
+			Component: Login
 			},
 			{
 				path: '/my-profile',
 				element: <ProtectedRoute><MyProfile /></ProtectedRoute>
+			},
+			{
+				path: '/chat',
+				element: <ProtectedRoute><Chat /></ProtectedRoute>
+			},
+			{
+				path: '/family',
+				element: <ProtectedRoute><FamilyInviteManager /></ProtectedRoute>
+			},
+			{
+				path: '/parent',
+				element: <ProtectedRoute><ParentView /></ProtectedRoute>
 			}
 		]
 	}

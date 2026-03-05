@@ -14,6 +14,6 @@ const client: DynamoDBClient = new DynamoDBClient({
 });
 const db: DynamoDBDocumentClient = DynamoDBDocumentClient.from(client);
 
-const tableName = 'MyFamilyApp'
+const tableName = 'chatbot'
 
 export { db, tableName }

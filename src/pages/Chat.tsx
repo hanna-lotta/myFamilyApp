@@ -1,0 +1,207 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { ChatBot } from '../components/chatBot';
+import './Chat.css';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faXmark, faTrash} from '@fortawesome/free-solid-svg-icons';
+import { useNavigate } from 'react-router';
+import useClickOutside from '../hooks/useClickOutside';
+import type { Session, JwtPayload } from '../types/types'; 
+import { getAuthHeader } from '../utils/auth';
+import { handleDeleteSession } from '../hooks/useChatActions';
+
+
+
+
+function decodeJwt(token: string): JwtPayload | null {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
+      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    ).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Failed to decode JWT:', error);
+    return null;
+  }
+}
+
+function getAuthParams(): { userId: string; familyId: string } | null {
+  const token = localStorage.getItem('jwt');
+  if (!token) return null;
+  
+  const payload = decodeJwt(token);
+  if (!payload) return null;
+  
+  return {
+    userId: payload.userId,
+    familyId: payload.familyId
+  };
+}
+
+export const Chat: React.FC = () => {
+  const [isSessionsOpen, setIsSessionsOpen] = useState(false);
+  const [isSessionsClosing, setIsSessionsClosing] = useState(false);
+  const [isSessionsVisible, setIsSessionsVisible] = useState(false);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const navigate = useNavigate();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+
+  //hämtar tidigare konversationer 
+  useEffect(() => {
+    const fetchSessions = async () => {
+      const authParams = getAuthParams();
+      if (!authParams) {
+        return;
+      }
+
+      setIsLoadingSessions(true);
+      try {
+        const url = `/api/chat/sessions?familyId=${authParams.familyId}&userId=${authParams.userId}`;
+        const authHeader = getAuthHeader();
+        
+        const response = await fetch(url, {
+          headers: authHeader ? { Authorization: authHeader } : undefined
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          // hantera olika möjliga strukturer av sessionsdata från backend
+          let sessionList: Session[] = [];
+          if (Array.isArray(data)) {
+            sessionList = data;
+          } else if (data && Array.isArray(data.sessions)) {
+            sessionList = data.sessions;
+          } else if (data && Array.isArray(data.items)) {
+            sessionList = data.items;
+          }
+          
+          setSessions(sessionList);
+        } else {
+          console.error('Failed to fetch sessions. Status:', response.status);
+          const error = await response.text();
+          console.error('Response:', error);
+        }
+      } catch (error) {
+        console.error('Fetch error:', error);
+      } finally {
+        setIsLoadingSessions(false);
+      }
+    };
+
+    fetchSessions();
+  }, []);
+
+  const handleSessionsClose = () => {
+    setIsSessionsClosing(true);
+    setTimeout(() => {
+      setIsSessionsOpen(false);
+      setIsSessionsClosing(false);
+      setIsSessionsVisible(false);
+    }, 610);
+  };
+  
+  useClickOutside(dropdownRef, () => {
+    if (isSessionsOpen && !isSessionsClosing) {
+      handleSessionsClose();
+    }
+  }, isSessionsVisible);
+
+  const handleSessionSelect = (sessionId: string) => {
+    navigate('/chat', { state: { loadSessionId: sessionId } });
+    setIsSessionsOpen(false);
+  };
+
+
+
+
+  return (
+    <div className="chat-page">
+      
+      <div className="chat-content">
+        <div className="chat-sessions">
+          <button 
+            className="chat-sessions-btn"
+            onClick={() => {
+              if (isSessionsClosing) return;
+              if (isSessionsOpen) {
+                handleSessionsClose();
+              } else {
+                setIsSessionsVisible(true);
+                setTimeout(() => setIsSessionsOpen(true), 10);
+              }
+            }}
+          >
+            Historik 
+          </button>
+          
+          {isSessionsVisible && (
+            <div 
+              ref={dropdownRef}
+              className={`chat-sessions-dropdown ${
+              isSessionsClosing ? "hide" : isSessionsOpen ? "show" : ""
+            }`}>
+              <div className="chat-sessions-header">
+                <h3>Tidigare konversationer</h3>
+                <button
+                  type="button"
+                  className="chat-sessions-close"
+                  onClick={handleSessionsClose}
+                  aria-label="Stäng"
+                >
+                  <FontAwesomeIcon icon={faXmark} />
+                </button>
+              </div>
+              
+              {isLoadingSessions ? (
+                <div className="chat-sessions-loading">Laddar...</div>
+              ) : sessions.length === 0 ? (
+                <div className="chat-sessions-empty">Inga tidigare konversationer</div>
+              ) : (
+                <div className="chat-sessions-list">
+                  {sessions.map((session) => (
+                    <li
+                      key={session.sessionId}
+                      className="chat-sessions-item"
+                      onClick={() => handleSessionSelect(session.sessionId)}
+                    >
+                      <span className="session-title">{session.title || 'Konversation'}</span>
+
+                       
+
+                       <button
+                        type="button"
+                        className="session-delete-btn"
+                        onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSession(session.sessionId, setSessions, sessions);
+                      }}
+                      >
+                        <span>Ta bort</span>{' '}
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    </li>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="chat-header">
+          <div className="chatbot-header">
+            <h1>🤖 Lexi – din smarta läxkompis</h1>
+            <p>Få hjälp med dina läxor - ställ frågor om matte, svenska, engelska och mer!</p>
+            <br />
+            <p>Jag hjälper dig att förstå din läxa genom att läsa upp den, sammanfatta det viktigaste, skapa quiz och svara på dina frågor. Du kan skriva, prata eller ta en bild av din uppgift. Jag sparar dina samtal så att du kan fortsätta där du slutade – och dina föräldrar kan följa din utveckling och stötta dig när det behövs.</p>
+          </div>
+          <div className="chat-wrapper">
+            <ChatBot />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

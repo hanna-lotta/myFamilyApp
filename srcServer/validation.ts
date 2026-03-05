@@ -1,0 +1,292 @@
+import * as z from 'zod'
+
+const familyIdSchema = z.string().regex(/^family#.+$/, 'Invalid familyId format');
+const userIdSchema = z.string().regex(/^user#.+$/, 'Invalid userId format');
+const usernameLookupPkSchema = z.string().regex(/^USERNAME#.+$/, 'Invalid username lookup key format');
+const childInviteLookupPkSchema = z.string().regex(/^CHILD_INVITE#.+$/, 'Invalid child invite key format');
+
+export const PayloadSchema = z.object({
+  userId: z.string(),
+  username: z.string(),
+  role: z.enum(['parent', 'child']),
+  familyId: z.string() // JWT använder bara UUID utan "family#" prefix
+});
+export type Payload = z.infer<typeof PayloadSchema>; // extrahera datatyp (type signature)
+
+export const registerSchema = z.object({
+  username: z.string().min(3),
+  password: z.string().min(6),
+  inviteCode: z.string().optional(), // Optional invite-kod
+  role: z.enum(['parent', 'child']).optional(), // Optional roll-val
+  childBirthdate: z.string().optional() // Barnets födelsedatum (YYYY-MM-DD) när man registrerar sig med child_invite
+})
+
+export type RegisterSchema = z.infer<typeof registerSchema>
+
+export const ItemSchema = z.object({
+  pk: z.string(),
+  sk: z.string(),
+  username: z.string(),
+  password: z.string(),
+  accessLevel: z.string(),
+})
+
+export const ItemsSchema = z.array(ItemSchema) //z.array(ItemSchema)
+//Skapar ett Zod-schema som beskriver "en array där varje element matchar ItemSchema". ItemSchema är ett tidigare definierat Zod‑schema (för ett enskilt user/item).
+
+export const colorUpdateSchema = z.object({
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color format') // Hex-färgformat, t.ex. #A1B2C3 - ändra error
+})
+
+export const ChildInviteLookupItemSchema = z.object({
+  pk: childInviteLookupPkSchema,
+  sk: z.literal('LOOKUP'),
+  familyId: familyIdSchema,
+  parentUsername: z.string(),
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  createdAt: z.string(),
+  used: z.boolean()
+});
+
+export const FamilyUserItemSchema = z.object({
+  pk: familyIdSchema,
+  sk: userIdSchema,
+  username: z.string(),
+  role: z.enum(['parent', 'child']),
+  color: z.string(),
+  createdAt: z.string()
+});
+
+export const FamilyMetadataSchema = z.object({
+  pk: familyIdSchema,
+  sk: z.literal('META'),
+  name: z.string(),
+  createdAt: z.string(),
+  inviteCode: z.string()
+});
+
+export const UserLookupItemSchema = z.object({
+  pk: usernameLookupPkSchema,
+  sk: z.literal('LOOKUP'),
+  username: z.string(),
+  password: z.string(),
+  familyId: familyIdSchema,
+  userId: userIdSchema
+});
+
+export const JwtResponseSchema = z.object({
+  success: z.boolean(),
+  token: z.string(),
+  username: z.string(),
+  color: z.string(),
+  familyId: z.string(),
+  role: z.enum(['parent', 'child']),
+  inviteCode: z.string().optional(),
+  response: z.string().optional(),
+  quiz: z.array(z.unknown()).optional(),
+  timestamp: z.string().optional(),
+  items: z.array(z.unknown()).optional(),
+  deletedCount: z.number().optional()
+});
+
+export type JwtResponseType = z.infer<typeof JwtResponseSchema>; // extraherar datatypen (type signature) från JwtResponseSchema, vilket ger oss en TypeScript-typ som matchar strukturen i JwtResponseSchema. Detta är användbart för att säkerställa typ-säkerhet i resten av koden när vi arbetar med JWT-responsobjekt. Genom att använda JwtResponseType kan vi få autokomplettering och typkontroll i TypeScript när vi skapar eller hanterar JWT-responsobjekt, vilket minskar risken för fel och förbättrar utvecklarupplevelsen.
+//Källa av sanning: Schemat är den enda källan — typen härledas från det.
+//Ingen drift: Interface och schema kan inte bli osynkade.
+//Mindre kod: En sak istället för två.
+
+export type ItemSchema = z.infer<typeof ItemSchema>
+export type ItemsSchema = z.infer<typeof ItemsSchema>
+export type ColorUpdateSchema = z.infer<typeof colorUpdateSchema>
+
+// Family routes schemas
+export const inviteCodeResponseSchema = z.object({
+  inviteCode: z.string(),
+  familyName: z.string()
+});
+export type InviteCodeResponse = z.infer<typeof inviteCodeResponseSchema>;
+
+export const childInviteRequestSchema = z.object({
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid birthDate format. Use YYYY-MM-DD')
+});
+export type ChildInviteRequest = z.infer<typeof childInviteRequestSchema>;
+
+export const childInviteResponseSchema = z.object({
+  childInviteCode: z.string()
+});
+export type ChildInviteResponse = z.infer<typeof childInviteResponseSchema>;
+
+export const chatRequestSchema = z.object({
+  message: z.string().trim().min(1).max(4000),
+  familyId: z.string().trim().min(1),
+  userId: z.string().trim().min(1),
+  sessionId: z.string().trim().min(1),
+  mode: z.enum(['quiz', 'chat']).optional(),
+  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+  subject: z.string().trim().min(1).optional()
+});
+
+export const statsRequestSchema = z.object({
+  familyId: z.string().trim().min(1),
+  userId: z.string().trim().min(1),
+  sessionId: z.string().trim().min(1),
+  quizScore: z.number().min(0).max(100),
+  questionCount: z.number().min(0).optional(),
+  subject: z.string().trim().min(1).optional()
+});
+
+export type ChatRequestBody = z.infer<typeof chatRequestSchema>;
+export type StatsRequestBody = z.infer<typeof statsRequestSchema>;
+
+
+export const ChatMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  text: z.string()
+});
+
+export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+
+const MessagesResponseSchema = z.object({
+  items: z.array(ChatMessageSchema)
+});
+
+export type MessagesResponse = z.infer<typeof MessagesResponseSchema>;
+
+export const messagesQuerySchema = z.object({
+  familyId: z.preprocess(
+	(value) => (Array.isArray(value) ? value[0] : value),
+	z.string().trim().min(1)
+  ),
+  userId: z.preprocess(
+	(value) => (Array.isArray(value) ? value[0] : value),
+	z.string().trim().min(1)
+  ),
+  sessionId: z.preprocess(
+	(value) => (Array.isArray(value) ? value[0] : value),
+	z.string().trim().min(1)
+  )
+});
+
+export type MessagesQuery = z.infer<typeof messagesQuerySchema> & {
+  [key: string]: string | undefined;
+};
+
+
+export const ParentMessagesResponseSchema = z.object({
+  items: z.array(ChatMessageSchema)
+});
+
+export type ParentMessagesResponse = z.infer<typeof ParentMessagesResponseSchema>;
+
+
+export const parentMessagesQuerySchema = z.object({
+  childUserId: z.preprocess(
+    (value) => (Array.isArray(value) ? value[0] : value),
+    z.string().trim().min(1)
+  ),
+  sessionId: z.preprocess(
+    (value) => (Array.isArray(value) ? value[0] : value),
+    z.string().trim().min(1)
+  )
+});
+
+export type ParentMessagesQuery = z.infer<typeof parentMessagesQuerySchema> & {
+  [key: string]: string | undefined;
+};
+
+export const sessionItemSchema = z.object({
+  sessionId: z.string(),
+  title: z.string()
+});
+
+export const sessionsResponseSchema = z.array(sessionItemSchema);
+
+export type SessionsResponse = z.infer<typeof sessionsResponseSchema>;
+
+export const sessionsQuerySchema = z.object({
+  familyId: z.preprocess(
+    (value) => (Array.isArray(value) ? value[0] : value),
+    z.string().trim().min(1)
+  ),
+  userId: z.preprocess(
+    (value) => (Array.isArray(value) ? value[0] : value),
+    z.string().trim().min(1)
+  )
+});
+
+export type SessionsQuery = z.infer<typeof sessionsQuerySchema> & {
+  [key: string]: string | undefined;
+};
+
+
+export const deleteMessageQuerySchema = z.object({
+  familyId: z.preprocess(
+	(value) => (Array.isArray(value) ? value[0] : value),
+	z.string().trim().min(1)
+  ),
+  userId: z.preprocess(
+	(value) => (Array.isArray(value) ? value[0] : value),
+	z.string().trim().min(1)
+  ),
+  sessionId: z.preprocess(
+	(value) => (Array.isArray(value) ? value[0] : value),
+	z.string().trim().min(1)
+  ),
+  timestamp: z.preprocess(
+	(value) => (Array.isArray(value) ? value[0] : value),
+	z.string().trim().min(1)
+  )
+});
+
+export type DeleteMessageQuery = z.infer<typeof deleteMessageQuerySchema> & {
+  [key: string]: string | undefined;
+};
+
+// Zod-schema för delete response
+export const deleteAccountResSchema = z.object({
+  success: z.boolean()
+});
+
+// Zod-schema för användarstatistik
+export const UserStatsSchema = z.object({
+  totalMinutes: z.number(),
+  questionCount: z.number(),
+  avgQuizScore: z.number().nullable(),
+});
+
+export type UserStats = z.infer<typeof UserStatsSchema>;
+
+// GET /api/user/stats 
+// Zod-schema för dailyStats
+export const dailyStatSchema = z.object({
+  date: z.string(),
+  minutes: z.number(),
+  questionCount: z.number()
+});
+export const statsResponseSchema = z.object({
+  totalMinutes: z.number(),
+  questionCount: z.number(),
+  avgQuizScore: z.number().nullable(),
+  dailyStats: z.array(dailyStatSchema)
+});
+export type StatsResponse = z.infer<typeof statsResponseSchema>;
+
+// Zod-schema för en todo
+export const todoItemSchema = z.object({
+  todoId: z.string().regex(/^\d+$/, 'todoId måste vara numeriskt'),
+  text: z.string().min(1, 'Todo får inte vara tom'),
+  createdAt: z.string()
+});
+export const todosResponseSchema = z.object({
+  todos: z.array(todoItemSchema)
+});
+export type TodoItem = z.infer<typeof todoItemSchema>;
+export type TodosResponse = z.infer<typeof todosResponseSchema>;
+
+export const todoSchema = z.object({
+  text: z.string().min(1, 'Todo får inte vara tom')
+});
+
+// Zod-schema för todoId
+export const todoIdSchema = z.object({
+  todoId: z.string().regex(/^\d+$/, 'todoId måste vara ett numeriskt id')
+});
