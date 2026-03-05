@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { quizAnswerSchema } from '../data/validation';
+import { quizAnswerSchema } from '../data/formValidation';
 
 interface QuizQuestion {
   question: string;

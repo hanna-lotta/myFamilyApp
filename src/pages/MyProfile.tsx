@@ -4,7 +4,7 @@ import '../components/ParentView.css';
 import './MyProfile.css';
 import { useNavigate } from 'react-router';
 import { getAuthHeader } from '../utils/auth';
-import { profileSchema, todoSchema } from '../data/validation';
+import { profileSchema, todoSchema } from '../data/formValidation';
 
 
 
