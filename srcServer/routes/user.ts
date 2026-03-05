@@ -4,7 +4,6 @@ import { validateJwt } from '../data/auth.js';
 import type { ErrorMessage, DeleteAccountRes } from '../data/types.js'
 import { DeleteCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb'
 import { db, tableName } from '../data/dynamoDb.js'
-import { z } from 'zod';
 import { deleteAccountResSchema, statsResponseSchema, todoIdSchema, todoItemSchema, todoSchema, todosResponseSchema, type StatsResponse, type TodoItem, type TodosResponse } from '../validation.js';
 
 const router: Router = express.Router();
